@@ -735,7 +735,6 @@ const [activeMarker, setActiveMarker] = useState(null);
     </div>
   );
 }
-
 // ── Styles ─────────────────────────────────────────────────────────────────────
 const overlay      = { position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 };
 const modal        = { background:"#fff", borderRadius:20, padding:28, width:"100%", maxWidth:420, boxShadow:"0 24px 64px rgba(0,0,0,0.35)", maxHeight:"90vh", overflowY:"auto" };
