@@ -421,6 +421,8 @@ export default function AlohaMap() {
   const [lotShapes, setLotShapes]       = useState({});
   const [activeEditLot, setActiveEditLot] = useState(null);
 const [amenity, setAmenity] = useState(null);
+  const [draftMarkers, setDraftMarkers] = useState(AMENITY_MARKERS);
+const [activeMarker, setActiveMarker] = useState(null);
   const containerRef = useRef(null);
   const [scale, setScale] = useState({ w:900, h:1130 });
 
@@ -563,6 +565,34 @@ const [amenity, setAmenity] = useState(null);
                 <span style={{ fontSize:"clamp(5px,0.85vw,10px)", fontWeight:700, color:"#fff", textShadow:"0 1px 3px rgba(0,0,0,0.8)", lineHeight:1, pointerEvents:"none" }}>
                   {lot}
                 </span>
+                {/* Amenity Markers */}
+{Object.entries(draftMarkers).map(([key, m]) => {
+  const isActiveM = EDIT_MODE && activeMarker === key;
+  return (
+    <div
+      key={key}
+      onClick={() => {
+        if (EDIT_MODE) { setActiveMarker(key); return; }
+        setAmenity(AMENITIES[key]);
+      }}
+      style={{
+        position:   "absolute",
+        left:       `${m.x}%`,
+        top:        `${m.y}%`,
+        fontSize:   "clamp(18px,3vw,32px)",
+        cursor:     "pointer",
+        zIndex:     isActiveM ? 30 : 10,
+        filter:     isActiveM ? "drop-shadow(0 0 6px #f59e0b)" : "drop-shadow(0 2px 3px rgba(0,0,0,0.5))",
+        transform:  isActiveM ? "scale(1.3)" : "scale(1)",
+        transition: "all 0.15s",
+        userSelect: "none",
+      }}
+    >
+      {m.icon}
+    </div>
+  );
+})}
+                
               </div>
             );
           })}
@@ -596,7 +626,39 @@ const [amenity, setAmenity] = useState(null);
               ))}
             </div>
           </div>
+           {/* Marker Edit Panel */}
+{EDIT_MODE && activeMarker && (
+  <div style={{ maxWidth:900, margin:"0 auto 20px", background:"#fff", border:"2px solid #f59e0b", borderRadius:14, padding:16, fontFamily:"sans-serif" }}>
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+      <strong style={{ fontSize:15 }}>
+        {draftMarkers[activeMarker].icon} Editing: <span style={{ color:"#16a34a" }}>{activeMarker}</span>
+      </strong>
+      <button onClick={()=>setActiveMarker(null)} style={{ background:"none", border:"none", fontSize:18, cursor:"pointer", color:"#888" }}>✕</button>
+    </div>
 
+    <div style={{ marginBottom:10 }}>
+      <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>POSITION</span>
+      <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
+        {[["← Left","x",-0.5],["Right →","x",0.5],["↑ Up","y",-0.5],["Down ↓","y",0.5]].map(([label,field,delta])=>(
+          <button key={label} onClick={()=>{
+            setDraftMarkers(prev => {
+              const m = { ...prev[activeMarker] };
+              m[field] = Number((m[field] + delta).toFixed(1));
+              return { ...prev, [activeMarker]: m };
+            });
+          }} style={editBtn}>{label}</button>
+        ))}
+      </div>
+    </div>
+
+    <div style={{ background:"#f9fafb", borderRadius:8, padding:10 }}>
+      <div style={{ fontSize:12, color:"#6b7280", marginBottom:4 }}>Copy coordinate:</div>
+      <pre style={{ margin:0, fontSize:12, color:"#14532d", fontFamily:"monospace", userSelect:"all" }}>
+{`${activeMarker}: { x: ${draftMarkers[activeMarker].x}, y: ${draftMarkers[activeMarker].y} },`}
+      </pre>
+    </div>
+  </div>
+)}
           {/* Shape */}
           <div style={{ marginBottom:12 }}>
             <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>SHAPE</span>
