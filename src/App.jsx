@@ -343,8 +343,12 @@ export default function AlohaMap() {
                   border: isHov ? "2px solid rgba(255,255,255,0.9)" : "1.5px solid rgba(255,255,255,0.45)",
                   display:"flex", alignItems:"center", justifyContent:"center",
                   transition:"all 0.12s",
-                  transform:
-  /^B([1-9]|10|11)$/.test(lot)
+                  ttransform:
+  (
+    /^B([1-9]|10|11)$/.test(lot) ||
+    /^C([1-8])$/.test(lot) ||
+    /^D([1-9]|10|11)$/.test(lot)
+  )
     ? isHov
       ? "skewY(-10deg) scale(1.08)"
       : "skewY(-10deg)"
