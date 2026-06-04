@@ -160,7 +160,7 @@ function getDefaultTransform(lot, isHov) {
   if (skewNeg)  return isHov ? "skewY(-10deg) scale(1.08)" : "skewY(-10deg)";
   if (skewPos)  return isHov ? "skewY(10deg) scale(1.08)"  : "skewY(10deg)";
   if (skewA)    return isHov ? "skewX(-8deg) scale(1.08)"  : "skewX(-8deg)";
-  if (skewANeg) return isHov ? "skewX(8deg) scale(1.08)"   : "skewX(8deg)";
+  if (skewANeg) return isHov ? "skewX(-8deg) scale(1.08)"  : "skewX(-8deg)";
   return isHov ? "scale(1.1)" : "scale(1)";
 }
 const AMENITIES = {
