@@ -326,7 +326,13 @@ export default function AlohaMap() {
                   border: isHov ? "2px solid rgba(255,255,255,0.9)" : "1.5px solid rgba(255,255,255,0.45)",
                   display:"flex", alignItems:"center", justifyContent:"center",
                   transition:"all 0.12s",
-                  transform: isHov ? "scale(1.1)" : "scale(1)",
+                  transform: lot.startsWith("B")
+  ? isHov
+    ? "skewY(-10deg) scale(1.08)"
+    : "skewY(-10deg)"
+  : isHov
+    ? "scale(1.1)"
+    : "scale(1)",
                   zIndex: isHov ? 20 : 1,
                   boxSizing:"border-box",
                 }}
