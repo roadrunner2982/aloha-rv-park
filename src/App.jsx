@@ -99,7 +99,7 @@ A31: [53.8, 38.4, 3.6, 4.2],
   D12: [88.1, 15.6, 5.2, 3],
   D11: [79.8, 27.1, 4.3, 2.1],
   D10: [79.8, 29.2, 4.3, 2.1],
-  D9: [79.8, 31.5, 4.3, 2.1],
+  D9: [79.8, 29.5, 4.3, 2.1],
   D8: [79.8, 33.6, 4.3, 2.1],
   D7: [79.8, 35.6, 4.3, 2.1],
   D6: [79.8, 37.6, 4.3, 2.1],
@@ -146,9 +146,15 @@ function getDefaultTransform(lot, isHov) {
     /^C([1-8])$/.test(lot) ||
     /^D([1-9]|10|11)$/.test(lot);
   const skewPos = /^C(9|10|11|12|13|14|15|16|17|18|19|20)$/.test(lot);
+  const skewA =
+    /^A([1-9]|10|11|12|13|14|15|16|17|18|19)$/.test(lot);
+  const skewANeg =
+    /^A(20|21|22|23|24|25|26|27|28|29|30|31)$/.test(lot);
 
   if (skewNeg)  return isHov ? "skewY(-10deg) scale(1.08)" : "skewY(-10deg)";
   if (skewPos)  return isHov ? "skewY(10deg) scale(1.08)"  : "skewY(10deg)";
+  if (skewA)    return isHov ? "skewX(-8deg) scale(1.08)"  : "skewX(-8deg)";
+  if (skewANeg) return isHov ? "skewX(8deg) scale(1.08)"   : "skewX(8deg)";
   return isHov ? "scale(1.1)" : "scale(1)";
 }
 
