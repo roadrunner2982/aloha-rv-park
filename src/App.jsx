@@ -583,7 +583,7 @@ const [activeMarker, setActiveMarker] = useState(null);
                   position:   "absolute",
                   left:       `${m.x}%`,
                   top:        `${m.y}%`,
-                  fontSize:   "clamp(18px,3vw,32px)",
+                  fontSize:   `${m.size || 28}px`,
                   cursor:     "pointer",
                   zIndex:     isActiveM ? 30 : 10,
                   filter:     isActiveM ? "drop-shadow(0 0 6px #f59e0b)" : "drop-shadow(0 2px 3px rgba(0,0,0,0.5))",
@@ -674,7 +674,7 @@ const [activeMarker, setActiveMarker] = useState(null);
     <div style={{ background:"#f9fafb", borderRadius:8, padding:10 }}>
       <div style={{ fontSize:12, color:"#6b7280", marginBottom:4 }}>Copy coordinate:</div>
       <pre style={{ margin:0, fontSize:12, color:"#14532d", fontFamily:"monospace", userSelect:"all" }}>
-{`${activeMarker}: { x: ${draftMarkers[activeMarker].x}, y: ${draftMarkers[activeMarker].y} },`}
+{`${activeMarker}: { x: ${draftMarkers[activeMarker].x}, y: ${draftMarkers[activeMarker].y}, size: ${draftMarkers[activeMarker].size || 28} },`}
       </pre>
     </div>
   </div>
