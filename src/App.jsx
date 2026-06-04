@@ -8,6 +8,7 @@ const AMENITY_MARKERS = {
   storage:      { x: 41, y: 2,  icon: "🚐",  key: "storage" },
   shuffleboard: { x: 54, y: 2,  icon: "⛹️", key: "shuffleboard" },
 };
+
 // ── Lot coordinate definitions [x_pct, y_pct, w_pct, h_pct] ──────────────────
 // Based on the 900x1130 resized map image
 const LOTS = {
