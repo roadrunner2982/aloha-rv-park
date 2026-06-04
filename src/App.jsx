@@ -652,6 +652,25 @@ const [activeMarker, setActiveMarker] = useState(null);
       </div>
     </div>
 
+    <div style={{ marginBottom:10 }}>
+      <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>SIZE</span>
+      <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
+        {[["Bigger","size",4],["Smaller","size",-4]].map(([label,field,delta])=>(
+          <button key={label} onClick={()=>{
+            setDraftMarkers(prev => {
+              const m = { ...prev[activeMarker] };
+              const current = m.size || 28;
+              m.size = Math.max(10, current + delta);
+              return { ...prev, [activeMarker]: m };
+            });
+          }} style={editBtn}>{label}</button>
+        ))}
+        <span style={{ fontSize:13, color:"#6b7280", alignSelf:"center" }}>
+          Size: {draftMarkers[activeMarker]?.size || 28}px
+        </span>
+      </div>
+    </div>
+
     <div style={{ background:"#f9fafb", borderRadius:8, padding:10 }}>
       <div style={{ fontSize:12, color:"#6b7280", marginBottom:4 }}>Copy coordinate:</div>
       <pre style={{ margin:0, fontSize:12, color:"#14532d", fontFamily:"monospace", userSelect:"all" }}>
