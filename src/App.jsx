@@ -565,37 +565,38 @@ const [activeMarker, setActiveMarker] = useState(null);
                 <span style={{ fontSize:"clamp(5px,0.85vw,10px)", fontWeight:700, color:"#fff", textShadow:"0 1px 3px rgba(0,0,0,0.8)", lineHeight:1, pointerEvents:"none" }}>
                   {lot}
                 </span>
-                {/* Amenity Markers */}
-{Object.entries(draftMarkers).map(([key, m]) => {
-  const isActiveM = EDIT_MODE && activeMarker === key;
-  return (
-    <div
-      key={key}
-      onClick={() => {
-        if (EDIT_MODE) { setActiveMarker(key); return; }
-        setAmenity(AMENITIES[key]);
-      }}
-      style={{
-        position:   "absolute",
-        left:       `${m.x}%`,
-        top:        `${m.y}%`,
-        fontSize:   "clamp(18px,3vw,32px)",
-        cursor:     "pointer",
-        zIndex:     isActiveM ? 30 : 10,
-        filter:     isActiveM ? "drop-shadow(0 0 6px #f59e0b)" : "drop-shadow(0 2px 3px rgba(0,0,0,0.5))",
-        transform:  isActiveM ? "scale(1.3)" : "scale(1)",
-        transition: "all 0.15s",
-        userSelect: "none",
-      }}
-    >
-      {m.icon}
-    </div>
-  );
-})}
-                
               </div>
             );
           })}
+
+          {/* Amenity Markers - FUERA del loop */}
+          {Object.entries(draftMarkers).map(([key, m]) => {
+            const isActiveM = EDIT_MODE && activeMarker === key;
+            return (
+              <div
+                key={key}
+                onClick={() => {
+                  if (EDIT_MODE) { setActiveMarker(key); return; }
+                  setAmenity(AMENITIES[key]);
+                }}
+                style={{
+                  position:   "absolute",
+                  left:       `${m.x}%`,
+                  top:        `${m.y}%`,
+                  fontSize:   "clamp(18px,3vw,32px)",
+                  cursor:     "pointer",
+                  zIndex:     isActiveM ? 30 : 10,
+                  filter:     isActiveM ? "drop-shadow(0 0 6px #f59e0b)" : "drop-shadow(0 2px 3px rgba(0,0,0,0.5))",
+                  transform:  isActiveM ? "scale(1.3)" : "scale(1)",
+                  transition: "all 0.15s",
+                  userSelect: "none",
+                }}
+              >
+                {m.icon}
+              </div>
+            );
+          })}
+
         </div>
       </div>
 
