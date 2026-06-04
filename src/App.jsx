@@ -363,8 +363,10 @@ transform:
         ? "skewY(10deg) scale(1.08)"
         : "skewY(10deg)"
       : isHov
-        ? "scale(1.1)"
+                ? "scale(1.1)"
         : "scale(1)",
+                  zIndex: isHov ? 20 : 1,
+                  boxSizing:"border-box",
                 }}
               >
                 <span style={{ fontSize:"clamp(5px,0.85vw,10px)", fontWeight:700, color:"#fff", textShadow:"0 1px 3px rgba(0,0,0,0.8)", lineHeight:1, pointerEvents:"none" }}>
