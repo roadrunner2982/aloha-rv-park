@@ -96,6 +96,8 @@ A31: [53.8, 38.4, 3.6, 4.2],
 
 const ALL_LOTS = Object.keys(LOTS);
 
+const EDIT_MODE = true;
+
 const STATUS_COLORS = {
   available:   "rgba(34,197,94,0.65)",
   occupied:    "rgba(239,68,68,0.7)",
@@ -110,7 +112,6 @@ const STATUS_SOLID = {
   maintenance: "#4b5563",
 };
 
-// Default mock statuses
 function initStatuses() {
   const s = {};
   ALL_LOTS.forEach(l => {
@@ -122,12 +123,24 @@ function initStatuses() {
   return s;
 }
 
+function getDefaultTransform(lot, isHov) {
+  const skewNeg =
+    /^B([1-9]|10|11)$/.test(lot) ||
+    /^C([1-8])$/.test(lot) ||
+    /^D([1-9]|10|11)$/.test(lot);
+  const skewPos = /^C(9|10|11|12|13|14|15|16|17|18|19|20)$/.test(lot);
+
+  if (skewNeg)  return isHov ? "skewY(-10deg) scale(1.08)" : "skewY(-10deg)";
+  if (skewPos)  return isHov ? "skewY(10deg) scale(1.08)"  : "skewY(10deg)";
+  return isHov ? "scale(1.1)" : "scale(1)";
+}
+
 // ── Booking Modal ──────────────────────────────────────────────────────────────
 function BookingModal({ lot, status, onClose, onConfirm }) {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ arrival: "", departure: "", name: "", email: "", phone: "", type: "daily" });
+  const [form, setForm] = useState({ arrival:"", departure:"", name:"", email:"", phone:"", type:"daily" });
 
-  const rates = { daily: 45, weekly: 38, monthly: 28, longterm: 22 };
+  const rates = { daily:45, weekly:38, monthly:28, longterm:22 };
   const nights = form.arrival && form.departure
     ? Math.max(0, Math.round((new Date(form.departure) - new Date(form.arrival)) / 86400000))
     : 0;
@@ -159,11 +172,10 @@ function BookingModal({ lot, status, onClose, onConfirm }) {
           <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#888" }}>✕</button>
         </div>
 
-        {/* Steps */}
         <div style={{ display:"flex", gap:0, marginBottom:24 }}>
           {["Dates","Info","Confirm"].map((s,i) => (
             <div key={i} style={{ flex:1, textAlign:"center" }}>
-              <div style={{ width:28, height:28, borderRadius:"50%", background: step > i+1 ? "#16a34a" : step===i+1 ? "#16a34a" : "#d1fae5", color: step>=i+1?"#fff":"#6b7280", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:13, margin:"0 auto 4px", fontFamily:"sans-serif" }}>
+              <div style={{ width:28, height:28, borderRadius:"50%", background: step>i+1?"#16a34a":step===i+1?"#16a34a":"#d1fae5", color:step>=i+1?"#fff":"#6b7280", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:13, margin:"0 auto 4px", fontFamily:"sans-serif" }}>
                 {step>i+1?"✓":i+1}
               </div>
               <div style={{ fontSize:11, color:step>=i+1?"#16a34a":"#9ca3af", fontFamily:"sans-serif" }}>{s}</div>
@@ -245,18 +257,21 @@ function BookingModal({ lot, status, onClose, onConfirm }) {
 
 // ── Main App ───────────────────────────────────────────────────────────────────
 export default function AlohaMap() {
-  const [statuses, setStatuses] = useState(initStatuses);
-  const [hover, setHover] = useState(null);
-  const [selected, setSelected] = useState(null);
-  const [confirmed, setConfirmed] = useState(null);
+  const [statuses, setStatuses]         = useState(initStatuses);
+  const [hover, setHover]               = useState(null);
+  const [selected, setSelected]         = useState(null);
+  const [confirmed, setConfirmed]       = useState(null);
+  const [draftLots, setDraftLots]       = useState(LOTS);
+  const [lotShapes, setLotShapes]       = useState({});
+  const [activeEditLot, setActiveEditLot] = useState(null);
   const containerRef = useRef(null);
-  const [scale, setScale] = useState({ w: 900, h: 1130 });
+  const [scale, setScale] = useState({ w:900, h:1130 });
 
   useEffect(() => {
     const update = () => {
       if (containerRef.current) {
         const w = containerRef.current.offsetWidth;
-        setScale({ w, h: w * (1130 / 900) });
+        setScale({ w, h: w * (1130/900) });
       }
     };
     update();
@@ -270,7 +285,17 @@ export default function AlohaMap() {
     setSelected(null);
   };
 
-  const counts = Object.values(statuses).reduce((acc, s) => { acc[s] = (acc[s]||0)+1; return acc; }, {});
+  const adjust = (field, delta) => {
+    setDraftLots(prev => {
+      const [x,y,w,h] = prev[activeEditLot];
+      const next = [x, y, w, h];
+      const idx = { x:0, y:1, w:2, h:3 }[field];
+      next[idx] = Number((next[idx] + delta).toFixed(1));
+      return { ...prev, [activeEditLot]: next };
+    });
+  };
+
+  const counts = Object.values(statuses).reduce((acc,s) => { acc[s]=(acc[s]||0)+1; return acc; }, {});
 
   if (confirmed) {
     return (
@@ -297,6 +322,7 @@ export default function AlohaMap() {
 
   return (
     <div style={{ minHeight:"100vh", background:"#f0fdf4", fontFamily:"sans-serif" }}>
+
       {/* Header */}
       <div style={{ background:"linear-gradient(135deg,#14532d,#16a34a)", padding:"16px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div>
@@ -304,7 +330,7 @@ export default function AlohaMap() {
           <div style={{ fontSize:12, color:"rgba(255,255,255,0.8)", letterSpacing:1 }}>INTERACTIVE LOT MAP · KISSIMMEE, FL</div>
         </div>
         <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-          {Object.entries(STATUS_COLORS).map(([s,c]) => (
+          {Object.entries(STATUS_COLORS).map(([s]) => (
             <div key={s} style={{ display:"flex", alignItems:"center", gap:5 }}>
               <div style={{ width:12, height:12, borderRadius:3, background:STATUS_SOLID[s] }} />
               <span style={{ color:"#fff", fontSize:11, textTransform:"capitalize", fontWeight:600 }}>{s} ({counts[s]||0})</span>
@@ -314,16 +340,14 @@ export default function AlohaMap() {
       </div>
 
       <div style={{ padding:"16px 16px 0", textAlign:"center" }}>
-        <p style={{ color:"#166534", fontWeight:600, margin:0, fontSize:14 }}>
-          {EDIT_MODE && draggingLot && (
-  <div style={{ marginTop:8, fontSize:13, color:"#14532d", fontWeight:700 }}>
-    Moving {draggingLot.lot}: {draggingLot.lot}: [{draftLots[draggingLot.lot].join(", ")}]
-  </div>
-)}
-        </p>
+        {EDIT_MODE && (
+          <p style={{ color:"#b45309", fontWeight:700, margin:0, fontSize:13, background:"#fef9c3", display:"inline-block", padding:"4px 14px", borderRadius:20 }}>
+            ✏️ EDIT MODE — Click any lot to adjust it
+          </p>
+        )}
       </div>
 
-      {/* Map Container */}
+      {/* Map */}
       <div style={{ padding:16, display:"flex", justifyContent:"center" }}>
         <div ref={containerRef} style={{ position:"relative", width:"100%", maxWidth:900, display:"inline-block" }}>
           <img
@@ -331,46 +355,53 @@ export default function AlohaMap() {
             alt="Aloha RV Park Map"
             style={{ width:"100%", height:"auto", display:"block", borderRadius:12, boxShadow:"0 4px 24px rgba(0,0,0,0.18)" }}
           />
+
           {/* Lot overlays */}
-          {Object.entries(LOTS).map(([lot, [x, y, w, h]]) => {
+          {Object.entries(draftLots).map(([lot, [x,y,w,h]]) => {
             const status = statuses[lot] || "available";
-            const isHov = hover === lot;
+            const isHov  = hover === lot;
+            const isEdit = EDIT_MODE && activeEditLot === lot;
             const yClamp = Math.min(y, 97);
+            const shape  = lotShapes[lot];
+            const borderRadius =
+              shape === "circle"  ? "50%" :
+              shape === "rounded" ? 12    : 3;
+
             return (
               <div
                 key={lot}
-                onClick={() => setSelected({ lot, status })}
+                onClick={() => {
+                  if (EDIT_MODE) { setActiveEditLot(lot); return; }
+                  setSelected({ lot, status });
+                }}
                 onMouseEnter={() => setHover(lot)}
                 onMouseLeave={() => setHover(null)}
                 title={`Lot ${lot} — ${status}`}
                 style={{
-                  position:"absolute",
-                  left:`${x}%`, top:`${yClamp}%`,
-                  width:`${w}%`, height:`${Math.min(h,6.5)}%`,
-                  background: isHov ? STATUS_COLORS[status].replace(/[\d.]+\)$/, "0.88)") : STATUS_COLORS[status],
-                  borderRadius:3,
-                  cursor: status === "available" ? "pointer" : "default",
-                  border: isHov ? "2px solid rgba(255,255,255,0.9)" : "1.5px solid rgba(255,255,255,0.45)",
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  transition:"all 0.12s",
-transform:
-  (
-    /^B([1-9]|10|11)$/.test(lot) ||
-    /^C([1-8])$/.test(lot) ||
-    /^D([1-9]|10)$/.test(lot)
-  )
-    ? isHov
-      ? "skewY(-10deg) scale(1.08)"
-      : "skewY(-10deg)"
-    : /^C(9|10|11|12|13|14|15|16|17|18|19|20)$/.test(lot)
-      ? isHov
-        ? "skewY(10deg) scale(1.08)"
-        : "skewY(10deg)"
-      : isHov
-                ? "scale(1.1)"
-        : "scale(1)",
-                  zIndex: isHov ? 20 : 1,
-                  boxSizing:"border-box",
+                  position:   "absolute",
+                  left:       `${x}%`,
+                  top:        `${yClamp}%`,
+                  width:      `${w}%`,
+                  height:     `${Math.min(h,6.5)}%`,
+                  background: isEdit
+                    ? "rgba(251,191,36,0.85)"
+                    : isHov
+                    ? STATUS_COLORS[status].replace(/[\d.]+\)$/, "0.88)")
+                    : STATUS_COLORS[status],
+                  borderRadius,
+                  cursor:     "pointer",
+                  border:     isEdit
+                    ? "2px solid #f59e0b"
+                    : isHov
+                    ? "2px solid rgba(255,255,255,0.9)"
+                    : "1.5px solid rgba(255,255,255,0.45)",
+                  display:    "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.12s",
+                  transform:  getDefaultTransform(lot, isHov && !isEdit),
+                  zIndex:     isEdit ? 30 : isHov ? 20 : 1,
+                  boxSizing:  "border-box",
                 }}
               >
                 <span style={{ fontSize:"clamp(5px,0.85vw,10px)", fontWeight:700, color:"#fff", textShadow:"0 1px 3px rgba(0,0,0,0.8)", lineHeight:1, pointerEvents:"none" }}>
@@ -382,8 +413,59 @@ transform:
         </div>
       </div>
 
-      {/* Booking modal */}
-      {selected && (
+      {/* ── Edit Panel ── */}
+      {EDIT_MODE && activeEditLot && (
+        <div style={{ maxWidth:900, margin:"0 auto 20px", background:"#fff", border:"2px solid #f59e0b", borderRadius:14, padding:16, fontFamily:"sans-serif" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+            <strong style={{ fontSize:15 }}>✏️ Editing Lot <span style={{ color:"#16a34a" }}>{activeEditLot}</span></strong>
+            <button onClick={()=>setActiveEditLot(null)} style={{ background:"none", border:"none", fontSize:18, cursor:"pointer", color:"#888" }}>✕</button>
+          </div>
+
+          {/* Position */}
+          <div style={{ marginBottom:10 }}>
+            <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>POSITION</span>
+            <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
+              {[["← Left","x",-0.3],["Right →","x",0.3],["↑ Up","y",-0.3],["Down ↓","y",0.3]].map(([label,field,delta])=>(
+                <button key={label} onClick={()=>adjust(field,delta)} style={editBtn}>{label}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Size */}
+          <div style={{ marginBottom:10 }}>
+            <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>SIZE</span>
+            <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
+              {[["Wider","w",0.3],["Narrower","w",-0.3],["Taller","h",0.3],["Shorter","h",-0.3]].map(([label,field,delta])=>(
+                <button key={label} onClick={()=>adjust(field,delta)} style={editBtn}>{label}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Shape */}
+          <div style={{ marginBottom:12 }}>
+            <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>SHAPE</span>
+            <div style={{ display:"flex", gap:8, marginTop:6 }}>
+              {["rectangle","rounded","circle"].map(s=>(
+                <button key={s} onClick={()=>setLotShapes(prev=>({...prev,[activeEditLot]:s}))}
+                  style={{ ...editBtn, background: lotShapes[activeEditLot]===s?"#16a34a":"#f3f4f6", color: lotShapes[activeEditLot]===s?"#fff":"#374151" }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Copy coords */}
+          <div style={{ background:"#f9fafb", borderRadius:8, padding:10 }}>
+            <div style={{ fontSize:12, color:"#6b7280", marginBottom:4 }}>Copy this coordinate to your LOTS object:</div>
+            <pre style={{ margin:0, fontSize:12, color:"#14532d", fontFamily:"monospace", userSelect:"all" }}>
+{`${activeEditLot}: [${draftLots[activeEditLot].join(", ")}],`}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {/* Booking modal — only in non-edit mode */}
+      {!EDIT_MODE && selected && (
         <BookingModal
           lot={selected.lot}
           status={selected.status}
@@ -395,12 +477,13 @@ transform:
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-const overlay = { position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 };
-const modal   = { background:"#fff", borderRadius:20, padding:28, width:"100%", maxWidth:420, boxShadow:"0 24px 64px rgba(0,0,0,0.35)", maxHeight:"90vh", overflowY:"auto" };
-const mh2     = { fontFamily:"Georgia,serif", fontSize:22, color:"#14532d", marginBottom:16 };
-const row2    = { display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:16 };
-const lbl     = { fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:6, fontFamily:"sans-serif" };
-const inp     = { width:"100%", padding:"9px 12px", border:"1.5px solid #d1fae5", borderRadius:8, fontSize:14, outline:"none", fontFamily:"sans-serif", boxSizing:"border-box" };
+// ── Styles ─────────────────────────────────────────────────────────────────────
+const overlay      = { position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 };
+const modal        = { background:"#fff", borderRadius:20, padding:28, width:"100%", maxWidth:420, boxShadow:"0 24px 64px rgba(0,0,0,0.35)", maxHeight:"90vh", overflowY:"auto" };
+const mh2          = { fontFamily:"Georgia,serif", fontSize:22, color:"#14532d", marginBottom:16 };
+const row2         = { display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:16 };
+const lbl          = { fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:6, fontFamily:"sans-serif" };
+const inp          = { width:"100%", padding:"9px 12px", border:"1.5px solid #d1fae5", borderRadius:8, fontSize:14, outline:"none", fontFamily:"sans-serif", boxSizing:"border-box" };
 const btnPrimary   = { background:"linear-gradient(135deg,#14532d,#16a34a)", color:"#fff", border:"none", padding:"11px 22px", borderRadius:50, cursor:"pointer", fontSize:14, fontWeight:600, fontFamily:"sans-serif" };
 const btnSecondary = { background:"#f3f4f6", color:"#374151", border:"1.5px solid #d1d5db", padding:"11px 22px", borderRadius:50, cursor:"pointer", fontSize:14, fontWeight:600, fontFamily:"sans-serif" };
+const editBtn      = { background:"#f3f4f6", color:"#374151", border:"1px solid #d1d5db", padding:"7px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontFamily:"sans-serif" };
