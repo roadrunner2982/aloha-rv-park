@@ -696,11 +696,11 @@ const [activeMarker, setActiveMarker] = useState(null);
     </div>
   </div>
 )}
-          {/* Shape */}
+         {/* Shape */}
           <div style={{ marginBottom:12 }}>
             <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>SHAPE</span>
-            <div style={{ display:"flex", gap:8, marginTop:6 }}>
-              {["rectangle","rounded","circle"].map(s=>(
+            <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
+              {["rectangle","rounded","circle","parallelogram-left","parallelogram-right"].map(s=>(
                 <button key={s} onClick={()=>setLotShapes(prev=>({...prev,[activeEditLot]:s}))}
                   style={{ ...editBtn, background: lotShapes[activeEditLot]===s?"#16a34a":"#f3f4f6", color: lotShapes[activeEditLot]===s?"#fff":"#374151" }}>
                   {s}
