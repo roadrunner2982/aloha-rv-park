@@ -601,7 +601,7 @@ const [activeMarker, setActiveMarker] = useState(null);
               <div
                 key={key}
                 onClick={() => {
-                  if (EDIT_MODE) { setActiveMarker(key); return; }
+                  if (EDIT_MODE) { setActiveMarker(key); setActiveEditLot(null); return; }
                   setAmenity(AMENITIES[key]);
                 }}
                 style={{
@@ -625,34 +625,50 @@ const [activeMarker, setActiveMarker] = useState(null);
         </div>
       </div>
 
-      {/* ── Edit Panel ── */}
-      {EDIT_MODE && activeEditLot && (
-        <div style={{ maxWidth:900, margin:"0 auto 20px", background:"#fff", border:"2px solid #f59e0b", borderRadius:14, padding:16, fontFamily:"sans-serif" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-            <strong style={{ fontSize:15 }}>✏️ Editing Lot <span style={{ color:"#16a34a" }}>{activeEditLot}</span></strong>
-            <button onClick={()=>setActiveEditLot(null)} style={{ background:"none", border:"none", fontSize:18, cursor:"pointer", color:"#888" }}>✕</button>
-          </div>
+     {/* ── Lot Edit Panel ── */}
+{EDIT_MODE && activeEditLot && (
+  <div style={{ maxWidth:900, margin:"0 auto 20px", background:"#fff", border:"2px solid #f59e0b", borderRadius:14, padding:16, fontFamily:"sans-serif" }}>
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+      <strong style={{ fontSize:15 }}>✏️ Editing Lot <span style={{ color:"#16a34a" }}>{activeEditLot}</span></strong>
+      <button onClick={()=>setActiveEditLot(null)} style={{ background:"none", border:"none", fontSize:18, cursor:"pointer", color:"#888" }}>✕</button>
+    </div>
+    <div style={{ marginBottom:10 }}>
+      <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>POSITION</span>
+      <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
+        {[["← Left","x",-0.3],["Right →","x",0.3],["↑ Up","y",-0.3],["Down ↓","y",0.3]].map(([label,field,delta])=>(
+          <button key={label} onClick={()=>adjust(field,delta)} style={editBtn}>{label}</button>
+        ))}
+      </div>
+    </div>
+    <div style={{ marginBottom:10 }}>
+      <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>SIZE</span>
+      <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
+        {[["Wider","w",0.3],["Narrower","w",-0.3],["Taller","h",0.3],["Shorter","h",-0.3]].map(([label,field,delta])=>(
+          <button key={label} onClick={()=>adjust(field,delta)} style={editBtn}>{label}</button>
+        ))}
+      </div>
+    </div>
+    <div style={{ marginBottom:12 }}>
+      <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>SHAPE</span>
+      <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
+        {["rectangle","rounded","circle","parallelogram-left","parallelogram-right"].map(s=>(
+          <button key={s} onClick={()=>setLotShapes(prev=>({...prev,[activeEditLot]:s}))}
+            style={{ ...editBtn, background: lotShapes[activeEditLot]===s?"#16a34a":"#f3f4f6", color: lotShapes[activeEditLot]===s?"#fff":"#374151" }}>
+            {s}
+          </button>
+        ))}
+      </div>
+    </div>
+    <div style={{ background:"#f9fafb", borderRadius:8, padding:10 }}>
+      <div style={{ fontSize:12, color:"#6b7280", marginBottom:4 }}>Copy this coordinate:</div>
+      <pre style={{ margin:0, fontSize:12, color:"#14532d", fontFamily:"monospace", userSelect:"all" }}>
+{`${activeEditLot}: [${draftLots[activeEditLot].join(", ")}],`}
+      </pre>
+    </div>
+  </div>
+)}
 
-          {/* Position */}
-          <div style={{ marginBottom:10 }}>
-            <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>POSITION</span>
-            <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
-              {[["← Left","x",-0.3],["Right →","x",0.3],["↑ Up","y",-0.3],["Down ↓","y",0.3]].map(([label,field,delta])=>(
-                <button key={label} onClick={()=>adjust(field,delta)} style={editBtn}>{label}</button>
-              ))}
-            </div>
-          </div>
-
-          {/* Size */}
-          <div style={{ marginBottom:10 }}>
-            <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>SIZE</span>
-            <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
-              {[["Wider","w",0.3],["Narrower","w",-0.3],["Taller","h",0.3],["Shorter","h",-0.3]].map(([label,field,delta])=>(
-                <button key={label} onClick={()=>adjust(field,delta)} style={editBtn}>{label}</button>
-              ))}
-            </div>
-          </div>
-           {/* Marker Edit Panel */}
+{/* ── Marker Edit Panel ── */}
 {EDIT_MODE && activeMarker && (
   <div style={{ maxWidth:900, margin:"0 auto 20px", background:"#fff", border:"2px solid #f59e0b", borderRadius:14, padding:16, fontFamily:"sans-serif" }}>
     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
@@ -661,7 +677,6 @@ const [activeMarker, setActiveMarker] = useState(null);
       </strong>
       <button onClick={()=>setActiveMarker(null)} style={{ background:"none", border:"none", fontSize:18, cursor:"pointer", color:"#888" }}>✕</button>
     </div>
-
     <div style={{ marginBottom:10 }}>
       <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>POSITION</span>
       <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
@@ -676,6 +691,31 @@ const [activeMarker, setActiveMarker] = useState(null);
         ))}
       </div>
     </div>
+    <div style={{ marginBottom:12 }}>
+      <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>SIZE</span>
+      <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
+        {[["Bigger","size",4],["Smaller","size",-4]].map(([label,field,delta])=>(
+          <button key={label} onClick={()=>{
+            setDraftMarkers(prev => {
+              const m = { ...prev[activeMarker] };
+              m.size = Math.max(10, (m.size || 28) + delta);
+              return { ...prev, [activeMarker]: m };
+            });
+          }} style={editBtn}>{label}</button>
+        ))}
+        <span style={{ fontSize:13, color:"#6b7280", alignSelf:"center" }}>
+          Size: {draftMarkers[activeMarker]?.size || 28}px
+        </span>
+      </div>
+    </div>
+    <div style={{ background:"#f9fafb", borderRadius:8, padding:10 }}>
+      <div style={{ fontSize:12, color:"#6b7280", marginBottom:4 }}>Copy coordinate:</div>
+      <pre style={{ margin:0, fontSize:12, color:"#14532d", fontFamily:"monospace", userSelect:"all" }}>
+{`${activeMarker}: { x: ${draftMarkers[activeMarker].x}, y: ${draftMarkers[activeMarker].y}, size: ${draftMarkers[activeMarker].size || 28} },`}
+      </pre>
+    </div>
+  </div>
+)}
 
     <div style={{ marginBottom:10 }}>
       <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>SIZE</span>
