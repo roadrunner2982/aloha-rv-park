@@ -541,7 +541,15 @@ const [activeMarker, setActiveMarker] = useState(null);
             const borderRadius =
               shape === "circle"  ? "50%" :
               shape === "rounded" ? 12    : 3;
+              const autoParaRight = /^D([1-9]|10|11|12|13|14|15|16|17|18|19)$/.test(lot);
+            const autoParaLeft  = /^C([1-8])$/.test(lot);
 
+            const shapeClip =
+              shape === "parallelogram-left"  ? "polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%)" :
+              shape === "parallelogram-right" ? "polygon(0% 0%, 90% 0%, 100% 100%, 10% 100%)" :
+              autoParaRight ? "polygon(0% 0%, 90% 0%, 100% 100%, 10% 100%)" :
+              autoParaLeft  ? "polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%)" :
+              "none";
             return (
               <div
                 key={lot}
@@ -574,7 +582,7 @@ const [activeMarker, setActiveMarker] = useState(null);
                   alignItems: "center",
                   justifyContent: "center",
                   transition: "all 0.12s",
-                  transform:  getDefaultTransform(lot, isHov && !isEdit),
+                  clipPath:   shapeClip,
                   zIndex:     isEdit ? 30 : isHov ? 20 : 1,
                   boxSizing:  "border-box",
                 }}
