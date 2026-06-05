@@ -557,7 +557,6 @@ const [activeMarker, setActiveMarker] = useState(null);
                   if (EDIT_MODE) { setActiveEditLot(lot); setActiveMarker(null); return; }
                   setSelected({ lot, status });
                 }}
-                }}
                 onMouseEnter={() => setHover(lot)}
                 onMouseLeave={() => setHover(null)}
                 title={`Lot ${lot} — ${status}`}
