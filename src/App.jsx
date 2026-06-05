@@ -542,7 +542,7 @@ const [activeMarker, setActiveMarker] = useState(null);
               shape === "circle"  ? "50%" :
               shape === "rounded" ? 12    : 0;
               const autoParaRight = /^D([1-9]|10|11|12|13|14|15|16|17|18|19)$/.test(lot);
-            const autoParaLeft  = /^C([1-8])$/.test(lot);
+            const autoParaLeft  = false;
 
             const shapeClip =
               shape === "parallelogram-left"  ? "polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%)" :
