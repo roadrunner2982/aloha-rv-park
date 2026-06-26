@@ -315,13 +315,13 @@ export default function AlohaMap() {
   const [activeEditLot, setActiveEditLot] = useState(null);
   const [snapLines, setSnapLines] = useState({ x: null, y: null });
   const [newLotName, setNewLotName] = useState("");
-  const [texts, setTexts] = useState(() => { try { return JSON.parse(localStorage.getItem("aloha_texts")) || []; } catch { return []; } });
+  const [texts, setTexts] = useState([]);
   const [lotColors, setLotColors] = useState({});
   const [rotations, setRotations] = useState({});
   const [emojiRotations, setEmojiRotations] = useState({});
   const [textRotations, setTextRotations] = useState({});
   const [lotInfo, setLotInfo] = useState({});
-  const [emojis, setEmojis] = useState(() => { try { return JSON.parse(localStorage.getItem("aloha_emojis")) || []; } catch { return []; } });
+  const [emojis, setEmojis] = useState([]);
   const [lotShapes, setLotShapes] = useState({});
   const [dragging, setDragging] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -340,12 +340,24 @@ export default function AlohaMap() {
 
   useEffect(() => {
     async function loadData() {
-      const rows = await loadFromSupabase('emojis');
-      if (rows.length > 0) setEmojis(rows[0].data || []);
-      const shapeRows = await loadFromSupabase('shapes');
+      const [emojiRows, shapeRows, statusRows, textRows, colorRows, rotRows, emojiRotRows, textRotRows] = await Promise.all([
+        loadFromSupabase('emojis'),
+        loadFromSupabase('shapes'),
+        loadFromSupabase('statuses'),
+        loadFromSupabase('texts'),
+        loadFromSupabase('lotColors'),
+        loadFromSupabase('rotations'),
+        loadFromSupabase('emojiRotations'),
+        loadFromSupabase('textRotations'),
+      ]);
+      if (emojiRows.length > 0) setEmojis(emojiRows[0].data || []);
       if (shapeRows.length > 0) setLotShapes(shapeRows[0].data || {});
-      const statusRows = await loadFromSupabase('statuses');
       if (statusRows.length > 0) setStatuses(statusRows[0].data || {});
+      if (textRows.length > 0) setTexts(textRows[0].data || []);
+      if (colorRows.length > 0) setLotColors(colorRows[0].data || {});
+      if (rotRows.length > 0) setRotations(rotRows[0].data || {});
+      if (emojiRotRows.length > 0) setEmojiRotations(emojiRotRows[0].data || {});
+      if (textRotRows.length > 0) setTextRotations(textRotRows[0].data || {});
       const info = await loadLotInfo(PARK_ID);
       setLotInfo(info);
     }
