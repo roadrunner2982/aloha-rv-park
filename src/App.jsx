@@ -54,7 +54,7 @@ async function loadFromSupabase(type) {
 }
 
 
-// ÃÂÃÂÃÂÃÂÃÂÃÂ Lot coordinate definitions [x_pct, y_pct, w_pct, h_pct] ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
+// ═══ Lot coordinate definitions [x_pct, y_pct, w_pct, h_pct] ═══
 // Based on the 900x1130 resized map image
 const EDIT_MODE = true;
 
@@ -179,7 +179,7 @@ function initStatuses() {
   return s;
 }
 
-// ÃÂÃÂÃÂÃÂÃÂÃÂ Booking Modal ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
+// ═══ Booking Modal ═══
 function BookingModal({ lot, status, onClose, onConfirm }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({ arrival: "", departure: "", name: "", email: "", phone: "", type: "daily" });
@@ -213,7 +213,7 @@ function BookingModal({ lot, status, onClose, onConfirm }) {
       <div style={{ ...modal, maxWidth:480 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
           <h2 style={mh2}>Book Lot {lot}</h2>
-          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#888" }}>ÃÂÃÂÃÂ</button>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#888" }}>✕</button>
         </div>
 
         {/* Steps */}
@@ -221,7 +221,7 @@ function BookingModal({ lot, status, onClose, onConfirm }) {
           {["Dates","Info","Confirm"].map((s,i) => (
             <div key={i} style={{ flex:1, textAlign:"center" }}>
               <div style={{ width:28, height:28, borderRadius:"50%", background: step > i+1 ? "#16a34a" : step===i+1 ? "#16a34a" : "#d1fae5", color: step>=i+1?"#fff":"#6b7280", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:13, margin:"0 auto 4px", fontFamily:"sans-serif" }}>
-                {step>i+1?"ÃÂÃÂÃÂ":i+1}
+                {step>i+1?"✓":i+1}
               </div>
               <div style={{ fontSize:11, color:step>=i+1?"#16a34a":"#9ca3af", fontFamily:"sans-serif" }}>{s}</div>
             </div>
@@ -254,12 +254,12 @@ function BookingModal({ lot, status, onClose, onConfirm }) {
             </div>
             {nights > 0 && (
               <div style={{ background:"#f0fdf4", borderRadius:8, padding:"10px 14px", marginBottom:16, fontFamily:"sans-serif", fontSize:14 }}>
-                <strong>{nights} nights</strong> ÃÂÃÂ ${rates[form.type]}/night = <strong style={{ color:"#16a34a", fontSize:18 }}>${total.toLocaleString()}</strong>
+                <strong>{nights} nights</strong> × ${rates[form.type]}/night = <strong style={{ color:"#16a34a", fontSize:18 }}>${total.toLocaleString()}</strong>
               </div>
             )}
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={onClose} style={btnSecondary}>Cancel</button>
-              <button onClick={()=>setStep(2)} disabled={!form.arrival||!form.departure} style={btnPrimary}>Next ÃÂÃÂÃÂ</button>
+              <button onClick={()=>setStep(2)} disabled={!form.arrival||!form.departure} style={btnPrimary}>Next →</button>
             </div>
           </div>
         )}
@@ -273,8 +273,8 @@ function BookingModal({ lot, status, onClose, onConfirm }) {
               </div>
             ))}
             <div style={{ display:"flex", gap:10 }}>
-              <button onClick={()=>setStep(1)} style={btnSecondary}>ÃÂÃÂÃÂ Back</button>
-              <button onClick={()=>setStep(3)} disabled={!form.name||!form.email} style={btnPrimary}>Next ÃÂÃÂÃÂ</button>
+              <button onClick={()=>setStep(1)} style={btnSecondary}>← Back</button>
+              <button onClick={()=>setStep(3)} disabled={!form.name||!form.email} style={btnPrimary}>Next →</button>
             </div>
           </div>
         )}
@@ -290,8 +290,8 @@ function BookingModal({ lot, status, onClose, onConfirm }) {
               ))}
             </div>
             <div style={{ display:"flex", gap:10 }}>
-              <button onClick={()=>setStep(2)} style={btnSecondary}>ÃÂÃÂÃÂ Back</button>
-              <button onClick={()=>onConfirm(lot, form)} style={{ ...btnPrimary, flex:1 }}>ÃÂÃÂÃÂ Confirm Booking</button>
+              <button onClick={()=>setStep(2)} style={btnSecondary}>← Back</button>
+              <button onClick={()=>onConfirm(lot, form)} style={{ ...btnPrimary, flex:1 }}>✓ Confirm Booking</button>
             </div>
           </div>
         )}
@@ -300,7 +300,7 @@ function BookingModal({ lot, status, onClose, onConfirm }) {
   );
 }
 
-// ÃÂÃÂÃÂÃÂÃÂÃÂ Main App ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
+// ═══ Main App ═══
 export default function AlohaMap() {
   const [statuses, setStatuses] = useState(initStatuses);
   const [hover, setHover] = useState(null);
@@ -386,20 +386,20 @@ export default function AlohaMap() {
     return (
       <div style={{ minHeight:"100vh", background:"#f0fdf4", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
         <div style={{ background:"#fff", borderRadius:20, padding:48, maxWidth:440, width:"100%", textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.15)" }}>
-          <div style={{ fontSize:64, marginBottom:16 }}>ÃÂÃÂÃÂÃÂ</div>
+          <div style={{ fontSize:64, marginBottom:16 }}>🎉</div>
           <h1 style={{ fontFamily:"Georgia,serif", fontSize:28, color:"#166534", marginBottom:12 }}>Reservation Confirmed!</h1>
           <p style={{ fontFamily:"sans-serif", color:"#555", marginBottom:8 }}>
             <strong>Lot {confirmed.lot}</strong> has been reserved for <strong>{confirmed.name}</strong>.
           </p>
           <p style={{ fontFamily:"sans-serif", color:"#555", marginBottom:24, fontSize:14 }}>
-            {confirmed.arrival} ÃÂÃÂÃÂ {confirmed.departure} ÃÂÃÂ Confirmation sent to {confirmed.email}
+            {confirmed.arrival} → {confirmed.departure} · Confirmation sent to {confirmed.email}
           </p>
           <div style={{ background:"#f0fdf4", borderRadius:12, padding:16, marginBottom:24 }}>
             <p style={{ fontFamily:"sans-serif", fontSize:13, color:"#16a34a", fontWeight:600 }}>
-              ÃÂÃÂÃÂÃÂ Aloha RV Park ÃÂÃÂ 4648 S. Orange Blossom Trail, Kissimmee FL 34744
+              📍 Aloha RV Park · 4648 S. Orange Blossom Trail, Kissimmee FL 34744
             </p>
           </div>
-          <button onClick={()=>setConfirmed(null)} style={{ ...btnPrimary, width:"100%" }}>ÃÂÃÂÃÂ Back to Map</button>
+          <button onClick={()=>setConfirmed(null)} style={{ ...btnPrimary, width:"100%" }}>← Back to Map</button>
         </div>
       </div>
     );
@@ -410,8 +410,8 @@ export default function AlohaMap() {
       {/* Header */}
       <div style={{ background:"linear-gradient(135deg,#14532d,#16a34a)", padding:"16px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div>
-          <div style={{ fontFamily:"Georgia,serif", fontWeight:900, fontSize:22, color:"#fff" }}>ÃÂÃÂÃÂÃÂ Aloha RV Park</div>
-          <div style={{ fontSize:12, color:"rgba(255,255,255,0.8)", letterSpacing:1 }}>INTERACTIVE LOT MAP ÃÂÃÂ KISSIMMEE, FL</div>
+          <div style={{ fontFamily:"Georgia,serif", fontWeight:900, fontSize:22, color:"#fff" }}>🏖️ Aloha RV Park</div>
+          <div style={{ fontSize:12, color:"rgba(255,255,255,0.8)", letterSpacing:1 }}>INTERACTIVE LOT MAP · KISSIMMEE, FL</div>
         </div>
         <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
           {Object.entries(STATUS_COLORS).map(([s,c]) => (
@@ -425,7 +425,7 @@ export default function AlohaMap() {
 
       <div style={{ padding:"16px 16px 0", textAlign:"center" }}>
         <p style={{ color:"#166534", fontWeight:600, margin:0, fontSize:14 }}>
-          Click any <span style={{ color:"#16a34a" }}>ÃÂÃÂÃÂ green lot</span> to reserve it. Hover to see the lot number.
+          Click any <span style={{ color:"#16a34a" }}>🟢 green lot</span> to reserve it. Hover to see the lot number.
         </p>
       </div>
 
@@ -529,7 +529,7 @@ export default function AlohaMap() {
                 onClick={() => setSelected({ lot, status })}
                 onMouseEnter={() => setHover(lot)}
                 onMouseLeave={() => setHover(null)}
-                title={`Lot ${lot} ÃÂÃÂÃÂ ${status}`}
+                title={`Lot ${lot} • ${status}`}
                 style={{
                   position:"absolute",
                   left:`${x}%`, top:`${y}%`,
@@ -592,7 +592,7 @@ export default function AlohaMap() {
               {item.emoji}
               {EDIT_MODE && (
                 <button onClick={()=>setEmojis(prev=>prev.filter(em=>em.id!==item.id))}
-                  style={{ position:"absolute", top:-8, right:-8, background:"#ef4444", color:"#fff", border:"none", borderRadius:"50%", width:16, height:16, fontSize:10, cursor:"pointer", lineHeight:"16px", textAlign:"center" }}>ÃÂÃÂ</button>
+                  style={{ position:"absolute", top:-8, right:-8, background:"#ef4444", color:"#fff", border:"none", borderRadius:"50%", width:16, height:16, fontSize:10, cursor:"pointer", lineHeight:"16px", textAlign:"center" }}>x</button>
               )}
             </Rnd>
           ))}
@@ -660,13 +660,13 @@ export default function AlohaMap() {
                       setActiveEditLot(null);
                     }
                   }} style={{ background:"#ef4444", color:"#fff", border:"none", padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:12 }}>Delete</button>
-                  <button onClick={()=>setActiveEditLot(null)} style={{ background:"none", border:"none", fontSize:18, cursor:"pointer", color:"#888" }}>ÃÂÃÂÃÂ</button>
+                  <button onClick={()=>setActiveEditLot(null)} style={{ background:"none", border:"none", fontSize:18, cursor:"pointer", color:"#888" }}>✕</button>
                 </div>
               </div>
               <div style={{ marginBottom:12 }}>
                 <span style={{ fontSize:12, fontWeight:600, color:"#6b7280" }}>STATUS / COLOR</span>
                 <div style={{ display:"flex", gap:8, marginTop:6, flexWrap:"wrap" }}>
-                  {[["available","#16a34a","ÃÂÂ Available"],["occupied","#dc2626","ÃÂÂÂ Occupied"],["reserved","#ca8a04","ÃÂÂÂ Reserved"],["maintenance","#4b5563","ÃÂÂ Maintenance"]].map(([s,c,label])=>(
+                  {[["available","#16a34a","🟢 Available"],["occupied","#dc2626","🔴 Occupied"],["reserved","#ca8a04","🟡 Reserved"],["maintenance","#4b5563","⚫ Maintenance"]].map(([s,c,label])=>(
                     <button key={s} onClick={()=>setStatuses(prev=>({...prev,[activeEditLot]:s}))}
                       style={{ background: statuses[activeEditLot]===s ? c : "#f3f4f6", color: statuses[activeEditLot]===s ? "#fff" : "#374151", border:`2px solid ${c}`, padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600 }}>
                       {label}
@@ -803,10 +803,10 @@ export default function AlohaMap() {
                 alert("Saved to GitHub! Vercel will deploy in ~30 seconds.");
               } else {
                 const err = await updateRes.json();
-                alert("ÃÂÃÂÃÂ Error: " + err.message);
+                alert("⚠️ Error: " + err.message);
               }
             } catch(e) {
-              alert("ÃÂÃÂÃÂ Error: " + e.message);
+              alert("⚠️ Error: " + e.message);
             }
           }} style={{ background:"#16a34a", color:"#fff", border:"none", padding:"10px 20px", borderRadius:8, cursor:"pointer", fontSize:14, fontWeight:600, width:"100%" }}>
             Save to GitHub
@@ -827,7 +827,7 @@ export default function AlohaMap() {
   );
 }
 
-// ÃÂÃÂÃÂÃÂÃÂÃÂ Styles ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
+// ═══ Styles ═══
 const overlay = { position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 };
 const modal   = { background:"#fff", borderRadius:20, padding:28, width:"100%", maxWidth:420, boxShadow:"0 24px 64px rgba(0,0,0,0.35)", maxHeight:"90vh", overflowY:"auto" };
 const mh2     = { fontFamily:"Georgia,serif", fontSize:22, color:"#14532d", marginBottom:16 };
