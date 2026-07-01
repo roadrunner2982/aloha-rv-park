@@ -664,19 +664,19 @@ export default function AlohaMap() {
                         ))}
                       </div>
                     )}
-                    {item.emoji === "⛽" && (
+                    {item.emoji === "⛽" && item.label && item.label.toLowerCase().includes("propane") && (
                       <a href="https://buy.stripe.com/eVqcN6f0r0CQaNAeGfbo400" target="_blank" rel="noopener noreferrer"
                         style={{ display:"block", marginTop:16, background:"linear-gradient(135deg,#14532d,#16a34a)", color:"#fff", textAlign:"center", padding:"12px 20px", borderRadius:50, fontWeight:700, fontSize:15, fontFamily:"sans-serif", textDecoration:"none" }}>
                         Pay Online
                       </a>
                     )}
-                    {item.emoji === "⛽" && (
+                    {item.emoji === "⛽" && item.label && item.label.toLowerCase().includes("propane") && (
                       <a href="https://buy.stripe.com/eVqcN6f0r0CQaNAeGfbo400" target="_blank" rel="noopener noreferrer"
                         style={{ display:"block", marginTop:16, background:"linear-gradient(135deg,#14532d,#16a34a)", color:"#fff", textAlign:"center", padding:"12px 20px", borderRadius:50, fontWeight:700, fontSize:15, fontFamily:"sans-serif", textDecoration:"none" }}>
                         Pay Online
                       </a>
                     )}
-                    {item.emoji === "⛽" && (
+                    {item.emoji === "⛽" && item.label && item.label.toLowerCase().includes("propane") && (
                       <a href="https://buy.stripe.com/eVqcN6f0r0CQaNAeGfbo400" target="_blank" rel="noopener noreferrer"
                         style={{ display:"block", marginTop:16, background:"linear-gradient(135deg,#14532d,#16a34a)", color:"#fff", textAlign:"center", padding:"12px 20px", borderRadius:50, fontWeight:700, fontSize:15, fontFamily:"sans-serif", textDecoration:"none" }}>
                         Pay Online
