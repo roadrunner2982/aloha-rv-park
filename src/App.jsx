@@ -675,8 +675,11 @@ export default function AlohaMap() {
                           ))}
                         </div>
                         <a href="https://buy.stripe.com/eVqcN6f0r0CQaNAeGfbo400" target="_blank" rel="noopener noreferrer"
-                          style={{ display:"block", background:"linear-gradient(135deg,#14532d,#16a34a)", color:"#fff", textAlign:"center", padding:"12px 20px", borderRadius:50, fontWeight:700, fontSize:15, fontFamily:"sans-serif", textDecoration:"none", boxShadow:"0 4px 12px rgba(22,163,74,0.3)" }}>
+                          style={{ display:"block", background:"linear-gradient(135deg,#14532d,#16a34a)", color:"#fff", textAlign:"center", padding:"12px 20px", borderRadius:50, fontWeight:700, fontSize:15, fontFamily:"sans-serif", textDecoration:"none", boxShadow:"0 4px 12px rgba(22,163,74,0.3)", marginBottom:10 }}>
                           💳 Pay Online
+                        </a>
+                        <a href="tel:6892520567" style={{ display:"block", background:"#f3f4f6", color:"#374151", textAlign:"center", padding:"10px 20px", borderRadius:50, fontWeight:700, fontSize:14, fontFamily:"sans-serif", textDecoration:"none", border:"1.5px solid #d1d5db" }}>
+                          📞 Forklift & Motor Home: Call (689) 252-0567
                         </a>
                       </div>
                     )}
