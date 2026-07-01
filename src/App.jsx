@@ -645,18 +645,29 @@ export default function AlohaMap() {
               )}
 
               {!editMode && activeEmoji === item.id && (item.label || item.info) && (
-                <div onClick={e => e.stopPropagation()} style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", background:"#fff", border:"2px solid #16a34a", borderRadius:16, padding:"20px 24px", minWidth:260, maxWidth:320, boxShadow:"0 24px 64px rgba(0,0,0,0.35)", zIndex:2000, fontFamily:"sans-serif" }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-                    <div style={{ fontSize:18, fontWeight:700, color:"#14532d" }}>{item.emoji} {item.label}</div>
-                    <button onClick={()=>setActiveEmoji(null)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#888" }}>✕</button>
-                  </div>
-                  {item.info && (
-                    <div style={{ background:"#f0fdf4", borderRadius:10, padding:"10px 14px" }}>
-                      {item.info.split("\n").map((line, i) => (
-                        <p key={i} style={{ margin:"0 0 6px", fontSize:13, color:"#166534", fontWeight:600 }}>{line}</p>
-                      ))}
+                <div onClick={()=>setActiveEmoji(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:1999, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+                  <div onClick={e=>e.stopPropagation()} style={{ background:"#fff", borderRadius:20, padding:"24px 28px", minWidth:280, maxWidth:360, width:"100%", boxShadow:"0 24px 64px rgba(0,0,0,0.4)", fontFamily:"sans-serif", position:"relative" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        <span style={{ fontSize:32 }}>{item.emoji}</span>
+                        <span style={{ fontSize:20, fontWeight:800, color:"#14532d", fontFamily:"Georgia,serif" }}>{item.label}</span>
+                      </div>
+                      <button onClick={()=>setActiveEmoji(null)} style={{ background:"#f3f4f6", border:"none", borderRadius:"50%", width:32, height:32, fontSize:16, cursor:"pointer", color:"#6b7280", display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
                     </div>
-                  )}
+                    {item.info && (
+                      <div style={{ background:"#f0fdf4", borderRadius:12, padding:"12px 16px", borderLeft:"4px solid #16a34a" }}>
+                        {item.info.split("\n").filter(l=>l.trim()).map((line, i) => (
+                          <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:8, marginBottom:8 }}>
+                            <span style={{ color:"#16a34a", fontWeight:700, fontSize:14, marginTop:1 }}>•</span>
+                            <p style={{ margin:0, fontSize:14, color:"#166534", fontWeight:600, lineHeight:1.4 }}>{line}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ marginTop:16, textAlign:"center" }}>
+                      <div style={{ fontSize:11, color:"#9ca3af", fontFamily:"sans-serif" }}>🌺 Aloha RV Park · Kissimmee, FL</div>
+                    </div>
+                  </div>
                 </div>
               )}
 
