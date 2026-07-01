@@ -156,6 +156,22 @@ const LOTS = {
 
 const ALL_LOTS = Object.keys(LOTS);
 
+const AMENITIES = [
+  { id: 'office', emoji: '🏢', x: 43.5, y: 22.0, label: 'Office', info: 'Office hours: Mon-Fri 9am-5pm, Sat 9am-12pm' },
+  { id: 'pool', emoji: '🏊', x: 57.0, y: 22.0, label: 'Pool', info: 'Pool open daily 8am-10pm' },
+  { id: 'shuffleboard', emoji: '🎯', x: 30.0, y: 10.5, label: 'Shuffleboard', info: 'Shuffleboard court - open 24/7' },
+  { id: 'propane', emoji: '⛽', x: 52.0, y: 10.5, label: 'Propane Station', info: 'Propane available - contact office for pricing' },
+  { id: 'garbage', emoji: '🗑️', x: 57.5, y: 10.5, label: 'Garbage', info: 'Garbage pickup Mon & Thu' },
+  { id: 'firepit', emoji: '🔥', x: 68.5, y: 22.0, label: 'Fire Pit', info: 'Community fire pit - open daily dusk to 11pm' },
+  { id: 'laundry', emoji: '🧺', x: 72.5, y: 68.0, label: 'Laundry 24/7', info: 'Laundry room open 24/7 - bring quarters' },
+  { id: 'mens-restroom', emoji: '🚹', x: 72.5, y: 63.0, label: "Men's Restrooms & Showers", info: "Men's restrooms and showers - open 24/7" },
+  { id: 'womens-restroom', emoji: '🚺', x: 72.5, y: 73.0, label: "Women's Restrooms & Showers", info: "Women's restrooms and shower - open 24/7" },
+  { id: 'storage', emoji: '🅿️', x: 83.0, y: 68.0, label: 'RV Storage Area', info: 'RV Storage available - contact office for rates and availability' },
+  { id: 'rechall', emoji: '🏛️', x: 83.0, y: 15.0, label: 'Rec Hall', info: 'Recreation Hall - available for events, contact office to reserve' },
+  { id: 'basketball', emoji: '⛹🏽', x: 57.0, y: 15.0, label: 'Basketball', info: 'Basketball court - open 24/7' },
+  { id: 'ambulance', emoji: '🚑', x: 2.0, y: 5.0, label: 'Emergency', info: 'Emergency - Call 911' },
+];
+
 const STATUS_COLORS = {
   available:   "rgba(34,197,94,0.65)",
   occupied:    "rgba(239,68,68,0.7)",
@@ -325,6 +341,7 @@ export default function AlohaMap() {
   const [lotShapes, setLotShapes] = useState({});
   const [dragging, setDragging] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [activeAmenity, setActiveAmenity] = useState(null);
 
   useEffect(() => {
     const update = () => {
@@ -449,6 +466,7 @@ export default function AlohaMap() {
         <div
           ref={containerRef}
           style={{ position:"relative", width:"100%", maxWidth:900, display:"inline-block", userSelect:"none" }}
+          onClick={() => setActiveAmenity(null)}
           onMouseMove={EDIT_MODE ? (e) => {
             if (!dragging) return;
             const rect = containerRef.current.getBoundingClientRect();
@@ -611,6 +629,31 @@ export default function AlohaMap() {
               )}
             </Rnd>
           ))}
+
+          {/* Amenity Markers */}
+          {AMENITIES.map(a => {
+            const ax = a.x / 100 * (scale.w || 900);
+            const ay = a.y / 100 * (scale.h || 1130);
+            const isActive = activeAmenity === a.id;
+            return (
+              <div key={a.id} style={{ position:"absolute", left:ax, top:ay, zIndex:300, transform:"translate(-50%,-50%)" }}>
+                <div
+                  onClick={e => { e.stopPropagation(); setActiveAmenity(isActive ? null : a.id); }}
+                  style={{ fontSize:18, cursor:"pointer", filter:"drop-shadow(0 1px 2px rgba(0,0,0,0.5))", userSelect:"none" }}
+                  title={a.label}
+                >
+                  {a.emoji}
+                </div>
+                {isActive && (
+                  <div style={{ position:"absolute", left:"50%", bottom:"calc(100% + 6px)", transform:"translateX(-50%)", background:"#fff", border:"1.5px solid #d1d5db", borderRadius:8, padding:"8px 10px", minWidth:180, maxWidth:220, boxShadow:"0 4px 12px rgba(0,0,0,0.15)", zIndex:400, fontFamily:"sans-serif" }}>
+                    <div style={{ fontWeight:700, fontSize:13, color:"#166534", marginBottom:4 }}>{a.emoji} {a.label}</div>
+                    <div style={{ fontSize:12, color:"#374151", lineHeight:1.4 }}>{a.info}</div>
+                    <button onClick={e => { e.stopPropagation(); setActiveAmenity(null); }} style={{ position:"absolute", top:4, right:6, background:"none", border:"none", fontSize:14, cursor:"pointer", color:"#9ca3af", lineHeight:1 }}>✕</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
