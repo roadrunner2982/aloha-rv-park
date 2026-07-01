@@ -652,8 +652,7 @@ export default function AlohaMap() {
                   </div>
                   {item.info && (
                     <div style={{ background:"#f0fdf4", borderRadius:10, padding:"10px 14px" }}>
-                      {item.info.split("
-").map((line, i) => (
+                      {item.info.split("\n").map((line, i) => (
                         <p key={i} style={{ margin:"0 0 6px", fontSize:13, color:"#166534", fontWeight:600 }}>{line}</p>
                       ))}
                     </div>
