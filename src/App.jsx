@@ -657,9 +657,9 @@ export default function AlohaMap() {
                     {item.info && (
                       <div style={{ background:"#f0fdf4", borderRadius:12, padding:"12px 16px", borderLeft:"4px solid #16a34a" }}>
                         {item.info.split("\n").filter(l=>l.trim()).map((line, i) => (
-                          <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:8, marginBottom:8 }}>
-                            <span style={{ color:"#16a34a", fontWeight:700, fontSize:14, marginTop:1 }}>•</span>
-                            <p style={{ margin:0, fontSize:14, color:"#166534", fontWeight:600, lineHeight:1.4 }}>{line}</p>
+                          <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:14 }}>
+                            <span style={{ color:"#16a34a", fontWeight:700, fontSize:16, marginTop:1 }}>•</span>
+                            <p style={{ margin:0, fontSize:15, color:"#166534", fontWeight:500, lineHeight:1.6, fontFamily:"Georgia, serif", letterSpacing:"0.01em" }}>{line}</p>
                           </div>
                         ))}
                       </div>
