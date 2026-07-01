@@ -839,6 +839,8 @@ export default function AlohaMap() {
 
               const token = import.meta.env.VITE_GITHUB_TOKEN;
               const repo = import.meta.env.VITE_GITHUB_REPO;
+              console.log("VITE_GITHUB_TOKEN:", token ? `set (${token.slice(0,8)}...)` : "UNDEFINED");
+              console.log("VITE_GITHUB_REPO:", repo || "UNDEFINED");
               // Get current file SHA
               const fileRes = await fetch(`https://api.github.com/repos/${repo}/contents/src/App.jsx`, {
                 headers: { Authorization: `token ${token}`, Accept: "application/vnd.github.v3+json" }
