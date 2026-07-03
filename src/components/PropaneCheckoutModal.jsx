@@ -64,7 +64,7 @@ export default function PropaneCheckoutModal({ lotId, onClose }) {
     <div style={styles.overlay}>
       <div style={styles.modal}>
         <div style={styles.header}>
-          <h3 style={styles.title}>⛽ Propano {lotId ? `— Lote ${lotId}` : ''}</h3>
+          <h3 style={styles.title}>⛽ Propane</h3>
           <button style={styles.closeBtn} onClick={onClose}>×</button>
         </div>
 
@@ -126,7 +126,7 @@ export default function PropaneCheckoutModal({ lotId, onClose }) {
             onClick={handleCheckout}
             disabled={loading}
           >
-            {loading ? 'Redirigiendo...' : 'Pagar con Stripe'}
+            {loading ? 'Processing...' : 'Pay Now'}
           </button>
         </div>
       </div>

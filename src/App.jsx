@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import PropaneCheckoutModal from './components/PropaneCheckoutModal';
+import StorageCheckoutModal from './components/StorageCheckoutModal';
 import { Rnd } from "react-rnd";
 
 const MAP_IMG = "/AlohaRvParkMap.png";
@@ -9,7 +10,7 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY;
 const PARK_ID = 'aloha';
 
 async function saveToSupabase(type, key, data) {
-  const res = await fetch(SUPABASE_URL + '/rest/v1/map_elements', {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/map_elements?on_conflict=park_id,element_type,element_key', {
     method: 'POST',
     headers: {
       'apikey': SUPABASE_KEY,
@@ -308,6 +309,7 @@ export default function AlohaMap() {
   const [statuses, setStatuses] = useState(initStatuses);
   const [hover, setHover] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [selectedStorageLot, setSelectedStorageLot] = useState(null);
   const [confirmed, setConfirmed] = useState(null);
   const containerRef = useRef(null);
   const [scale, setScale] = useState({ w: 900, h: 1130 });
@@ -328,6 +330,7 @@ export default function AlohaMap() {
   const [editMode, setEditMode] = useState(true);
   const [activeEmoji, setActiveEmoji] = useState(null);
   const [propaneModalLotId, setPropaneModalLotId] = useState(null);
+  const [storageModalOpen, setStorageModalOpen] = useState(false);
 
   useEffect(() => {
     const update = () => {
@@ -545,7 +548,13 @@ export default function AlohaMap() {
             return (
               <div
                 key={lot}
-                onClick={() => setSelected({ lot, status })}
+                onClick={() => {
+                  if (lot.startsWith("S")) {
+                    setSelectedStorageLot({ lot, status });
+                  } else {
+                    setSelected({ lot, status });
+                  }
+                }}
                 onMouseEnter={() => setHover(lot)}
                 onMouseLeave={() => setHover(null)}
                 title={`Lot ${lot} • ${status}`}
@@ -684,7 +693,7 @@ export default function AlohaMap() {
                 </div>
               )}
 
-              {/* no tooltip - title only shows in popup */}
+                            {/* no tooltip - title only shows in popup */}
             </Rnd>
             );
           })}
@@ -694,6 +703,17 @@ export default function AlohaMap() {
 
       {propaneModalLotId && (
         <PropaneCheckoutModal lotId={propaneModalLotId} onClose={()=>setPropaneModalLotId(null)} />
+      )}
+      {selectedStorageLot && (
+        <StorageCheckoutModal
+          lotId={selectedStorageLot.lot}
+          lotInfo={lotInfo[selectedStorageLot.lot]}
+          onClose={() => setSelectedStorageLot(null)}
+        />
+      )}
+
+      {storageModalOpen && (
+        <StorageCheckoutModal onClose={()=>setStorageModalOpen(false)} />
       )}
 
       {/* Edit/Preview Toggle */}
@@ -826,56 +846,142 @@ export default function AlohaMap() {
               </div>
               <div style={{ marginBottom:12, background:"#f0fdf4", borderRadius:10, padding:12 }}>
                 <strong style={{ fontSize:13, color:"#166534" }}>Lot Details (visible to guests)</strong>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginTop:8 }}>
-                  <div>
-                    <label style={{ fontSize:11, color:"#6b7280", display:"block", marginBottom:3 }}>Max RV Length (ft)</label>
-                    <input type="number" defaultValue={lotInfo[activeEditLot]?.max_length || 45}
-                      onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], max_length:parseInt(e.target.value)}}))}
-                      style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize:11, color:"#6b7280", display:"block", marginBottom:3 }}>Amperage</label>
-                    <select defaultValue={lotInfo[activeEditLot]?.amperage || 50}
-                      onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], amperage:parseInt(e.target.value)}}))}
-                      style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }}>
-                      <option value={30}>30 Amp</option>
-                      <option value={50}>50 Amp</option>
-                      <option value={30.50}>30/50 Amp</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ fontSize:11, color:"#6b7280", display:"block", marginBottom:3 }}>Daily Price ($)</label>
-                    <input type="number" defaultValue={lotInfo[activeEditLot]?.price_daily || 45}
-                      onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], price_daily:parseFloat(e.target.value)}}))}
-                      style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize:11, color:"#6b7280", display:"block", marginBottom:3 }}>Monthly Price ($)</label>
-                    <input type="number" defaultValue={lotInfo[activeEditLot]?.price_monthly || 650}
-                      onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], price_monthly:parseFloat(e.target.value)}}))}
-                      style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
-                  </div>
-                </div>
-                <div style={{ marginTop:8 }}>
-                  <label style={{ fontSize:11, color:"#6b7280", display:"block", marginBottom:3 }}>Description</label>
-                  <textarea defaultValue={lotInfo[activeEditLot]?.description || ""}
-                    onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], description:e.target.value}}))}
-                    placeholder="e.g. Corner lot, extra space, near pool..."
-                    style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box", resize:"vertical", minHeight:60 }} />
-                </div>
-                <button onClick={async ()=>{
-                  const info = lotInfo[activeEditLot] || {};
-                  await saveLotInfo(PARK_ID, activeEditLot, {
-                    max_length: info.max_length || 45,
-                    amperage: info.amperage || 50,
-                    price_daily: info.price_daily || 45,
-                    price_monthly: info.price_monthly || 650,
-                    description: info.description || ""
-                  });
-                  alert("Lot info saved!");
-                }} style={{ marginTop:8, background:"#16a34a", color:"#fff", border:"none", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, width:"100%" }}>
-                  Save Lot Info
-                </button>
+                {activeEditLot.startsWith("S") ? (
+                  <>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginTop:8 }}>
+                      <div>
+                        <label style={{ fontSize:11, color:"#6b7280",display:"block", marginBottom:3 }}>Type</label>
+                        <select defaultValue={lotInfo[activeEditLot]?.lot_type || "outdoor"}
+                          onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], lot_type:e.target.value}}))}
+                          style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }}>
+                          <option value="outdoor">Outdoor</option>
+                          <option value="indoor">Indoor</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize:11, color:"#6b7280",display:"block", marginBottom:3 }}>Size</label>
+                        <input type="text" defaultValue={lotInfo[activeEditLot]?.size || ""}
+                          onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], size:e.target.value}}))}
+                          placeholder="e.g. 20ft x 10ft"
+                          style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
+                      </div>
+                    </div>
+                    <div style={{ marginTop:8, display:"flex", alignItems:"center", gap:8 }}>
+                      <input type="checkbox" id="hasElec" checked={lotInfo[activeEditLot]?.has_electricity || false}
+                        onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], has_electricity:e.target.checked}}))} />
+                      <label htmlFor="hasElec" style={{ fontSize:12, color:"#374151" }}>Has electricity</label>
+                    </div>
+                    {lotInfo[activeEditLot]?.has_electricity && (
+                      <div style={{ marginTop:8 }}>
+                        <label style={{ fontSize:11, color:"#6b7280",display:"block", marginBottom:3 }}>Amperage</label>
+                        <select defaultValue={lotInfo[activeEditLot]?.amperage || 30}
+                          onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], amperage:parseInt(e.target.value)}}))}
+                          style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }}>
+                          <option value={30}>30 Amp</option>
+                          <option value={50}>50 Amp</option>
+                          <option value={30.50}>30/50 Amp</option>
+                        </select>
+                      </div>
+                    )}
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginTop:8 }}>
+                      <div>
+                        <label style={{ fontSize:11, color:"#6b7280",display:"block", marginBottom:3 }}>Daily ($)</label>
+                        <input type="number" defaultValue={lotInfo[activeEditLot]?.price_daily || 10}
+                          onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], price_daily:parseFloat(e.target.value)}}))}
+                          style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize:11, color:"#6b7280",display:"block", marginBottom:3 }}>Monthly ($)</label>
+                        <input type="number" defaultValue={lotInfo[activeEditLot]?.price_monthly || 100}
+                          onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], price_monthly:parseFloat(e.target.value)}}))}
+                          style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize:11, color:"#6b7280",display:"block", marginBottom:3 }}>Yearly ($)</label>
+                        <input type="number" defaultValue={lotInfo[activeEditLot]?.price_yearly || ""}
+                          onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], price_yearly:parseFloat(e.target.value)}}))}
+                          placeholder="optional"
+                          style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
+                      </div>
+                    </div>
+                    <div style={{ marginTop:8 }}>
+                      <label style={{ fontSize:11, color:"#6b7280", display:"block", marginBottom:3 }}>Description</label>
+                      <textarea defaultValue={lotInfo[activeEditLot]?.description || ""}
+                        onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], description:e.target.value}}))}
+                        placeholder="e.g. Covered spot, near entrance..."
+                        style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box", resize:"vertical", minHeight:60 }} />
+                    </div>
+                    <button onClick={async ()=>{
+                      const info = lotInfo[activeEditLot] || {};
+                      await saveLotInfo(PARK_ID, activeEditLot, {
+                        lot_type: info.lot_type || "outdoor",
+                        size: info.size || "",
+                        has_electricity: info.has_electricity || false,
+                        amperage: info.has_electricity ? (info.amperage || 30) : null,
+                        price_daily: info.price_daily || 10,
+                        price_monthly: info.price_monthly || 100,
+                        price_yearly: info.price_yearly || null,
+                        description: info.description || ""
+                      });
+                      alert("Lot info saved!");
+                    }} style={{ marginTop:8, background:"#16a34a", color:"#fff", border:"none", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, width:"100%" }}>
+                      Save Lot Info
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginTop:8 }}>
+                      <div>
+                        <label style={{ fontSize:11, color:"#6b7280",display:"block", marginBottom:3 }}>Max RV Length (ft)</label>
+                        <input type="number" defaultValue={lotInfo[activeEditLot]?.max_length || 45}
+                          onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], max_length:parseInt(e.target.value)}}))}
+                          style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize:11, color:"#6b7280",display:"block", marginBottom:3 }}>Amperage</label>
+                        <select defaultValue={lotInfo[activeEditLot]?.amperage || 50}
+                          onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], amperage:parseInt(e.target.value)}}))}
+                          style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }}>
+                          <option value={30}>30 Amp</option>
+                          <option value={50}>50 Amp</option>
+                          <option value={30.50}>30/50 Amp</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize:11, color:"#6b7280",display:"block", marginBottom:3 }}>Daily Price ($)</label>
+                        <input type="number" defaultValue={lotInfo[activeEditLot]?.price_daily || 45}
+                          onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], price_daily:parseFloat(e.target.value)}}))}
+                          style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize:11, color:"#6b7280",display:"block", marginBottom:3 }}>Monthly Price ($)</label>
+                        <input type="number" defaultValue={lotInfo[activeEditLot]?.price_monthly || 650}
+                          onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], price_monthly:parseFloat(e.target.value)}}))}
+                          style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
+                      </div>
+                    </div>
+                    <div style={{ marginTop:8 }}>
+                      <label style={{ fontSize:11, color:"#6b7280", display:"block", marginBottom:3 }}>Description</label>
+                      <textarea defaultValue={lotInfo[activeEditLot]?.description || ""}
+                        onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], description:e.target.value}}))}
+                        placeholder="e.g. Corner lot, extra space, near pool..."
+                        style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box", resize:"vertical", minHeight:60 }} />
+                    </div>
+                    <button onClick={async ()=>{
+                      const info = lotInfo[activeEditLot] || {};
+                      await saveLotInfo(PARK_ID, activeEditLot, {
+                        max_length: info.max_length || 45,
+                        amperage: info.amperage || 50,
+                        price_daily: info.price_daily || 45,
+                        price_monthly: info.price_monthly || 650,
+                        description: info.description || ""
+                      });
+                      alert("Lot info saved!");
+                    }} style={{ marginTop:8, background:"#16a34a", color:"#fff", border:"none", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, width:"100%" }}>
+                      Save Lot Info
+                    </button>
+                  </>
+                )}
               </div>
               <div style={{ background:"#f9fafb", borderRadius:8, padding:10, marginBottom:10 }}>
                 <div style={{ fontSize:12, color:"#6b7280", marginBottom:4 }}>Coordinates:</div>

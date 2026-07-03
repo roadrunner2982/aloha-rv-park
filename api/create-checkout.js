@@ -24,15 +24,24 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Producto inválido' });
     }
 
-    const qty = parseInt(quantity, 10);
-    if (!Number.isFinite(qty) || qty < 1) {
+    const isGallon = product.unit === 'gallon';
+    const rawQty = isGallon ? parseFloat(quantity) : parseInt(quantity, 10);
+
+    if (!Number.isFinite(rawQty) || rawQty <= 0) {
       return res.status(400).json({ error: 'Cantidad inválida' });
     }
-    if (qty > product.maxQty) {
+    if (rawQty > product.maxQty) {
       return res.status(400).json({ error: `Cantidad máxima: ${product.maxQty}` });
     }
 
     const origin = req.headers.origin || `https://${req.headers.host}`;
+
+    // Stripe no acepta cantidades con decimales, así que para productos por galón
+    // calculamos el precio total exacto y usamos quantity: 1
+    const lineItemAmount = isGallon
+      ? Math.round(product.unitAmount * rawQty)
+      : product.unitAmount;
+    const lineItemQty = isGallon ? 1 : rawQty;
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -44,16 +53,16 @@ export default async function handler(req, res) {
             currency: 'usd',
             product_data: {
               name: product.name,
-              description: product.unit === 'gallon' ? `${qty} galones × $4.25` : `Cantidad: ${qty}`,
+              description: isGallon ? `${rawQty} gallons × $4.25` : `Quantity: ${rawQty}`,
             },
-            unit_amount: product.unitAmount,
+            unit_amount: lineItemAmount,
           },
-          quantity: qty,
+          quantity: lineItemQty,
         },
       ],
       metadata: {
         productId,
-        quantity: String(qty),
+        quantity: String(rawQty),
         lotId: lotId || '',
         park: 'aloha-rv-park',
       },

@@ -51,33 +51,90 @@ export default async function handler(req, res) {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
-    const { productId, quantity, lotId, park } = session.metadata || {};
+    const { service } = session.metadata || {};
 
-    try {
-      const { error } = await supabase.from('propane_orders').upsert(
-        {
-          park_id: park || 'aloha',
-          lot_id: lotId || null,
-          product_id: productId,
-          product_label: PRODUCT_LABELS[productId] || productId,
-          quantity: parseFloat(quantity),
-          unit: productId === 'motorhome' ? 'gallon' : 'tank',
-          amount_total: (session.amount_total || 0) / 100,
-          currency: session.currency || 'usd',
-          customer_email: session.customer_details?.email || null,
-          stripe_session_id: session.id,
-          stripe_payment_intent: session.payment_intent || null,
-          status: 'paid',
-          paid_at: new Date().toISOString(),
-        },
-        { onConflict: 'stripe_session_id' }
-      );
+    if (service === 'rv_storage') {
+      const { billingType, quantity, isSubscription, lotId } = session.metadata || {};
 
-      if (error) {
-        console.error('Supabase insert error:', error);
+      try {
+        const { error } = await supabase.from('storage_orders').upsert(
+          {
+            customer_email: session.customer_details?.email || null,
+            customer_name: session.customer_details?.name || null,
+            billing_type: billingType,
+            lot_id: lotId || null,
+            quantity: parseFloat(quantity),
+            amount_total: (session.amount_total || 0) / 100,
+            is_subscription: isSubscription === 'true',
+            stripe_session_id: session.id,
+            stripe_subscription_id: session.subscription || null,
+            status: 'paid',
+          },
+          { onConflict: 'stripe_session_id' }
+        );
+
+        if (error) {
+          console.error('Supabase storage order insert error:', error);
+        }
+      } catch (err) {
+        console.error('Error saving storage order:', err);
       }
-    } catch (err) {
-      console.error('Error saving propane order:', err);
+    } else {
+      // Flujo original de propano
+      const { productId, quantity, lotId, park } = session.metadata || {};
+
+      try {
+        const { error } = await supabase.from('propane_orders').upsert(
+          {
+            park_id: park || 'aloha',
+            lot_id: lotId || null,
+            product_id: productId,
+            product_label: PRODUCT_LABELS[productId] || productId,
+            quantity: parseFloat(quantity),
+            unit: productId === 'motorhome' ? 'gallon' : 'tank',
+            amount_total: (session.amount_total || 0) / 100,
+            currency: session.currency || 'usd',
+            customer_email: session.customer_details?.email || null,
+            stripe_session_id: session.id,
+            stripe_payment_intent: session.payment_intent || null,
+            status: 'paid',
+            paid_at: new Date().toISOString(),
+          },
+          { onConflict: 'stripe_session_id' }
+        );
+
+        if (error) {
+          console.error('Supabase insert error:', error);
+        }
+      } catch (err) {
+        console.error('Error saving propane order:', err);
+      }
+    }
+  }
+
+  // Manejo de pagos recurrentes de suscripciones (después del primer mes)
+  if (event.type === 'invoice.payment_succeeded') {
+    const invoice = event.data.object;
+    const subscriptionId = invoice.subscription;
+
+    if (subscriptionId && invoice.billing_reason === 'subscription_cycle') {
+      try {
+        const { error } = await supabase.from('storage_orders').insert({
+          customer_email: invoice.customer_email || null,
+          billing_type: 'monthly',
+          quantity: 1,
+          amount_total: (invoice.amount_paid || 0) / 100,
+          is_subscription: true,
+          stripe_subscription_id: subscriptionId,
+          status: 'paid',
+        });
+
+        if (error) {
+          console.error('Supabase recurring order insert error:', error);
+        }
+      } catch (err) {
+        console.error('Error saving recurring storage order:', err);
+      }
     }
   }
 
