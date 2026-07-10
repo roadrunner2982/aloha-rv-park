@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import PropaneCheckoutModal from './components/PropaneCheckoutModal';
 import StorageCheckoutModal from './components/StorageCheckoutModal';
+import LotCheckoutModal from './components/LotCheckoutModal';
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { Rnd } from "react-rnd";
 
 const MAP_IMG = "/AlohaRvParkMap.png";
@@ -24,7 +27,7 @@ async function saveToSupabase(type, key, data) {
 }
 
 async function saveLotInfo(parkId, lotKey, info) {
-  const res = await fetch(SUPABASE_URL + '/rest/v1/lot_info', {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/lot_info?on_conflict=park_id,lot_key', {
     method: 'POST',
     headers: {
       'apikey': SUPABASE_KEY,
@@ -46,6 +49,27 @@ async function loadLotInfo(parkId) {
   const result = {};
   rows.forEach(r => { result[r.lot_key] = r; });
   return result;
+}
+async function saveParkSettings(settings) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/park_settings?on_conflict=id', {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify({ id: 1, ...settings })
+  });
+  return res.ok;
+}
+async function loadParkSettings() {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/park_settings?id=eq.1', {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+  });
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return rows[0] || null;
 }
 
 async function loadFromSupabase(type) {
@@ -190,32 +214,124 @@ function initStatuses() {
 }
 
 // ═══ Booking Modal ═══
-function BookingModal({ lot, status, onClose, onConfirm }) {
-  const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ arrival: "", departure: "", name: "", email: "", phone: "", type: "daily" });
+function calcStayPreview(arrivalStr, departureStr, hasWeekly) {
+  const arrival = new Date(arrivalStr + "T00:00:00");
+  const departure = new Date(departureStr + "T00:00:00");
+  const totalNights = Math.round((departure - arrival) / 86400000);
 
-  const rates = { daily: 45, weekly: 38, monthly: 28, longterm: 22 };
-  const nights = form.arrival && form.departure
-    ? Math.max(0, Math.round((new Date(form.departure) - new Date(form.arrival)) / 86400000))
-    : 0;
-  const total = nights * (rates[form.type] || 45);
+  if (totalNights === 365) {
+    return { isYearly: true, months: 0, weeks: 0, extraDays: 0, totalNights: totalNights + 1 };
+  }
 
-  if (status !== "available") {
-    return (
-      <div style={overlay}>
-        <div style={modal}>
-          <h2 style={mh2}>Lot {lot}</h2>
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:20 }}>
-            <div style={{ width:14, height:14, borderRadius:3, background: STATUS_SOLID[status] }} />
-            <span style={{ textTransform:"capitalize", fontWeight:600, fontFamily:"sans-serif" }}>{status}</span>
-          </div>
-          <p style={{ fontFamily:"sans-serif", color:"#555", marginBottom:20 }}>
-            This lot is currently <strong>{status}</strong> and not available for booking.
-          </p>
-          <button onClick={onClose} style={btnSecondary}>Close</button>
-        </div>
-      </div>
-    );
+  let months = 0;
+  let cursor = new Date(arrival);
+  while (true) {
+    const next = new Date(cursor);
+    next.setMonth(next.getMonth() + 1);
+    if (next <= departure) {
+      months++;
+      cursor = next;
+    } else {
+      break;
+    }
+  }
+  const remainingAfterMonths = Math.round((departure - cursor) / 86400000);
+  const weeks = hasWeekly ? Math.floor(remainingAfterMonths / 7) : 0;
+  const leftoverExclusive = remainingAfterMonths - (weeks * 7);
+  // Both arrival and departure days are billable, so any leftover daily
+  // segment counts one extra day (e.g. 7/3 to 7/9 = 7 billable days, not 6 nights).
+  const extraDays = leftoverExclusive > 0 ? leftoverExclusive + 1 : 0;
+
+  return { isYearly: false, months, weeks, extraDays, totalNights: totalNights + 1 };
+}
+
+function BookingModal({ lot, status, lotInfo, parkSettings, onClose }) {
+  const [form, setForm] = useState({ arrival: "", departure: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [bookedRanges, setBookedRanges] = useState([]);
+  const [loadingAvailability, setLoadingAvailability] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/get-lot-availability?lotId=' + encodeURIComponent(lot))
+      .then(res => res.json())
+      .then(data => {
+        setBookedRanges(Array.isArray(data) ? data : []);
+        setLoadingAvailability(false);
+      })
+      .catch(() => setLoadingAvailability(false));
+  }, [lot]);
+
+  const excludeDateIntervals = bookedRanges.map(r => {
+    const start = new Date(r.arrival_date + "T00:00:00");
+    const end = new Date(r.departure_date + "T00:00:00");
+    end.setDate(end.getDate() - 1); // checkout day itself is available for a new arrival
+    return { start, end };
+  });
+
+  function rangeOverlaps(arrivalStr, departureStr) {
+    const arrival = new Date(arrivalStr + "T00:00:00");
+    const departure = new Date(departureStr + "T00:00:00");
+    return bookedRanges.some(r => {
+      const bookedStart = new Date(r.arrival_date + "T00:00:00");
+      const bookedEnd = new Date(r.departure_date + "T00:00:00");
+      return arrival < bookedEnd && departure > bookedStart;
+    });
+  }
+
+  const hasWeekly = !!lotInfo?.price_weekly;
+  const hasValidDates = form.arrival && form.departure && new Date(form.departure) > new Date(form.arrival);
+  const hasOverlap = hasValidDates && rangeOverlaps(form.arrival, form.departure);
+  const stay = hasValidDates && !hasOverlap ? calcStayPreview(form.arrival, form.departure, hasWeekly) : null;
+
+  let total = 0;
+  let breakdownLines = [];
+  if (stay) {
+    if (stay.isYearly) {
+      total = lotInfo?.price_yearly || 0;
+      breakdownLines.push(`1 year × $${lotInfo?.price_yearly || 0}/year`);
+    } else {
+      const monthlyCost = stay.months * (lotInfo?.price_monthly || 0);
+      const weeklyCost = stay.weeks * (lotInfo?.price_weekly || 0);
+      const dailyCost = stay.extraDays * (lotInfo?.price_daily || 0);
+      total = monthlyCost + weeklyCost + dailyCost;
+      if (stay.months > 0) breakdownLines.push(`${stay.months} month(s) × $${lotInfo?.price_monthly || 0}/month = $${monthlyCost.toLocaleString()}`);
+      if (stay.weeks > 0) breakdownLines.push(`${stay.weeks} week(s) × $${lotInfo?.price_weekly || 0}/week = $${weeklyCost.toLocaleString()}`);
+      if (stay.extraDays > 0) breakdownLines.push(`${stay.extraDays} night(s) × $${lotInfo?.price_daily || 0}/night = $${dailyCost.toLocaleString()}`);
+    }
+  }
+
+  async function handlePayNow() {
+    setError("");
+    if (!hasValidDates) {
+      setError("Please select a valid arrival and departure date");
+      return;
+    }
+    if (rangeOverlaps(form.arrival, form.departure)) {
+      setError("These dates overlap with an existing reservation. Please choose different dates.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/create-lot-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lotId: lot,
+          arrivalDate: form.arrival,
+          departureDate: form.departure,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error creating payment');
+
+      window.location.href = data.url;
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.');
+      setLoading(false);
+    }
   }
 
   return (
@@ -226,84 +342,277 @@ function BookingModal({ lot, status, onClose, onConfirm }) {
           <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#888" }}>✕</button>
         </div>
 
-        {/* Steps */}
-        <div style={{ display:"flex", gap:0, marginBottom:24 }}>
-          {["Dates","Info","Confirm"].map((s,i) => (
-            <div key={i} style={{ flex:1, textAlign:"center" }}>
-              <div style={{ width:28, height:28, borderRadius:"50%", background: step > i+1 ? "#16a34a" : step===i+1 ? "#16a34a" : "#d1fae5", color: step>=i+1?"#fff":"#6b7280", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:13, margin:"0 auto 4px", fontFamily:"sans-serif" }}>
-                {step>i+1?"✓":i+1}
-              </div>
-              <div style={{ fontSize:11, color:step>=i+1?"#16a34a":"#9ca3af", fontFamily:"sans-serif" }}>{s}</div>
-            </div>
-          ))}
-        </div>
+        {status !== "available" && (
+          <div style={{ display:"flex", alignItems:"center", gap:8, background:"#fffbeb", border:"1px solid #fde68a", borderRadius:8, padding:"8px 12px", marginBottom:16, fontFamily:"sans-serif" }}>
+            <div style={{ width:10, height:10, borderRadius:3, background: STATUS_SOLID[status] }} />
+            <span style={{ fontSize:12, color:"#92400e" }}>
+              This lot is currently marked <strong style={{ textTransform:"capitalize" }}>{status}</strong>, but you can still book any open dates below.
+            </span>
+          </div>
+        )}
 
-        {step === 1 && (
-          <div>
-            <div style={row2}>
+        {(lotInfo?.max_length || lotInfo?.amperage) && (
+          <div style={{ background:"#f9fafb", borderRadius:8, padding:"10px 12px", marginBottom:16, display:"flex", gap:16, fontFamily:"sans-serif" }}>
+            {lotInfo?.max_length && (
               <div>
-                <label style={lbl}>Arrival</label>
-                <input type="date" value={form.arrival} onChange={e=>setForm({...form,arrival:e.target.value})} style={inp} />
-              </div>
-              <div>
-                <label style={lbl}>Departure</label>
-                <input type="date" value={form.departure} onChange={e=>setForm({...form,departure:e.target.value})} style={inp} />
-              </div>
-            </div>
-            <div style={{ marginBottom:20 }}>
-              <label style={lbl}>Stay Type</label>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                {[["daily","Daily","$45/night"],["weekly","Weekly","$38/night"],["monthly","Monthly","$28/night"],["longterm","Long-Term","$22/night"]].map(([v,l,r])=>(
-                  <div key={v} onClick={()=>setForm({...form,type:v})}
-                    style={{ border:`2px solid ${form.type===v?"#16a34a":"#d1fae5"}`, background:form.type===v?"#f0fdf4":"#fff", borderRadius:8, padding:"10px 12px", cursor:"pointer" }}>
-                    <div style={{ fontWeight:700, fontSize:13, fontFamily:"sans-serif" }}>{l}</div>
-                    <div style={{ fontSize:11, color:"#6b7280", fontFamily:"sans-serif" }}>{r}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {nights > 0 && (
-              <div style={{ background:"#f0fdf4", borderRadius:8, padding:"10px 14px", marginBottom:16, fontFamily:"sans-serif", fontSize:14 }}>
-                <strong>{nights} nights</strong> × ${rates[form.type]}/night = <strong style={{ color:"#16a34a", fontSize:18 }}>${total.toLocaleString()}</strong>
+                <span style={{ fontSize:11, color:"#6b7280" }}>Max RV Length: </span>
+                <span style={{ fontSize:12, fontWeight:700, color:"#374151" }}>{lotInfo.max_length}ft</span>
               </div>
             )}
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={onClose} style={btnSecondary}>Cancel</button>
-              <button onClick={()=>setStep(2)} disabled={!form.arrival||!form.departure} style={btnPrimary}>Next →</button>
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div>
-            {[["name","Full Name","text","John & Jane Doe"],["email","Email","email","you@email.com"],["phone","Phone","tel","407-555-0000"]].map(([k,label,type,ph])=>(
-              <div key={k} style={{ marginBottom:14 }}>
-                <label style={lbl}>{label}</label>
-                <input type={type} value={form[k]||""} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder={ph} style={inp} />
+            {lotInfo?.amperage && (
+              <div>
+                <span style={{ fontSize:11, color:"#6b7280" }}>Amperage: </span>
+                <span style={{ fontSize:12, fontWeight:700, color:"#374151" }}>{lotInfo.amperage} Amp</span>
               </div>
+            )}
+          </div>
+        )}
+
+        {lotInfo?.description && (
+          <div style={{ background:"#f0fdf4", borderRadius:8, padding:"8px 12px", marginBottom:16, fontSize:13, color:"#166534", fontFamily:"sans-serif" }}>
+            {lotInfo.description}
+          </div>
+        )}
+
+        <div style={{ marginBottom:16 }}>
+          <label style={lbl}>Rates</label>
+          {(() => {
+            const monthlyPerNight = lotInfo?.price_monthly ? lotInfo.price_monthly / 30 : null;
+            const weeklyPerNight = lotInfo?.price_weekly ? lotInfo.price_weekly / 7 : null;
+            const yearlyPerNight = lotInfo?.price_yearly ? lotInfo.price_yearly / 365 : null;
+            const bestPerNight = Math.min(...[weeklyPerNight, monthlyPerNight, yearlyPerNight].filter(v => v !== null));
+            const isBest = (v) => v !== null && v === bestPerNight;
+
+            const hasYearly = !!lotInfo?.price_yearly;
+            const cols = 2 + (hasWeekly ? 1 : 0) + (hasYearly ? 1 : 0);
+
+            return (
+              <div style={{ display:"grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap:8 }}>
+                <div style={{ border:"1.5px solid #d1fae5", borderRadius:8, padding:"10px 8px", textAlign:"center", position:"relative" }}>
+                  <div style={{ fontWeight:700, fontSize:12, fontFamily:"sans-serif" }}>Daily</div>
+                  <div style={{ fontSize:12, color:"#16a34a", fontWeight:700, fontFamily:"sans-serif" }}>{lotInfo?.price_daily ? `$${lotInfo.price_daily}` : "—"}</div>
+                  <div style={{ fontSize:10, color:"#9ca3af" }}>per night</div>
+                </div>
+                {hasWeekly && (
+                  <div style={{ border: isBest(weeklyPerNight) ? "2px solid #16a34a" : "1.5px solid #d1fae5", borderRadius:8, padding:"10px 8px", textAlign:"center", position:"relative", background: isBest(weeklyPerNight) ? "#f0fdf4" : "transparent" }}>
+                    {isBest(weeklyPerNight) && (
+                      <div style={{ position:"absolute", top:-9, left:"50%", transform:"translateX(-50%)", background:"#16a34a", color:"#fff", fontSize:8, fontWeight:700, padding:"2px 6px", borderRadius:10, whiteSpace:"nowrap" }}>BEST VALUE</div>
+                    )}
+                    <div style={{ fontWeight:700, fontSize:12, fontFamily:"sans-serif" }}>Weekly</div>
+                    <div style={{ fontSize:12, color:"#16a34a", fontWeight:700, fontFamily:"sans-serif" }}>${lotInfo.price_weekly}</div>
+                    <div style={{ fontSize:10, color:"#9ca3af" }}>per week</div>
+                    {weeklyPerNight && (
+                      <div style={{ fontSize:9, color:"#16a34a", fontWeight:600, marginTop:2 }}>≈ ${weeklyPerNight.toFixed(2)}/night</div>
+                    )}
+                  </div>
+                )}
+                <div style={{ border: isBest(monthlyPerNight) ? "2px solid #16a34a" : "1.5px solid #d1fae5", borderRadius:8, padding:"10px 8px", textAlign:"center", position:"relative", background: isBest(monthlyPerNight) ? "#f0fdf4" : "transparent" }}>
+                  {isBest(monthlyPerNight) && (
+                    <div style={{ position:"absolute", top:-9, left:"50%", transform:"translateX(-50%)", background:"#16a34a", color:"#fff", fontSize:8, fontWeight:700, padding:"2px 6px", borderRadius:10, whiteSpace:"nowrap" }}>BEST VALUE</div>
+                  )}
+                  <div style={{ fontWeight:700, fontSize:12, fontFamily:"sans-serif" }}>Monthly</div>
+                  <div style={{ fontSize:12, color:"#16a34a", fontWeight:700, fontFamily:"sans-serif" }}>{lotInfo?.price_monthly ? `$${lotInfo.price_monthly}` : "—"}</div>
+                  <div style={{ fontSize:10, color:"#9ca3af" }}>per month</div>
+                  {monthlyPerNight && (
+                    <div style={{ fontSize:9, color:"#16a34a", fontWeight:600, marginTop:2 }}>≈ ${monthlyPerNight.toFixed(2)}/night</div>
+                  )}
+                </div>
+                {hasYearly && (
+                  <div style={{ border: isBest(yearlyPerNight) ? "2px solid #16a34a" : "1.5px solid #d1fae5", borderRadius:8, padding:"10px 8px", textAlign:"center", position:"relative", background: isBest(yearlyPerNight) ? "#f0fdf4" : "transparent" }}>
+                    {isBest(yearlyPerNight) && (
+                      <div style={{ position:"absolute", top:-9, left:"50%", transform:"translateX(-50%)", background:"#16a34a", color:"#fff", fontSize:8, fontWeight:700, padding:"2px 6px", borderRadius:10, whiteSpace:"nowrap" }}>BEST VALUE</div>
+                    )}
+                    <div style={{ fontWeight:700, fontSize:12, fontFamily:"sans-serif" }}>Yearly</div>
+                    <div style={{ fontSize:12, color:"#16a34a", fontWeight:700, fontFamily:"sans-serif" }}>${lotInfo.price_yearly}</div>
+                    <div style={{ fontSize:10, color:"#9ca3af" }}>per year</div>
+                    {yearlyPerNight && (
+                      <div style={{ fontSize:9, color:"#16a34a", fontWeight:600, marginTop:2 }}>≈ ${yearlyPerNight.toFixed(2)}/night</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+
+        <div style={row2}>
+          <div>
+            <label style={lbl}>Arrival</label>
+            <DatePicker
+              selected={form.arrival ? new Date(form.arrival + "T00:00:00") : null}
+              onChange={(date) => setForm({...form, arrival: date ? date.toISOString().split("T")[0] : ""})}
+              minDate={new Date()}
+              excludeDateIntervals={excludeDateIntervals}
+              dateFormat="MM/dd/yyyy"
+              placeholderText={loadingAvailability ? "Loading..." : "Select date"}
+              disabled={loadingAvailability}
+              className="lot-date-input"
+            />
+          </div>
+          <div>
+            <label style={lbl}>Departure</label>
+            <DatePicker
+              selected={form.departure ? new Date(form.departure + "T00:00:00") : null}
+              onChange={(date) => setForm({...form, departure: date ? date.toISOString().split("T")[0] : ""})}
+              minDate={form.arrival ? new Date(form.arrival + "T00:00:00") : new Date()}
+              excludeDateIntervals={excludeDateIntervals}
+              dateFormat="MM/dd/yyyy"
+              placeholderText={loadingAvailability ? "Loading..." : "Select date"}
+              disabled={loadingAvailability}
+              className="lot-date-input"
+            />
+          </div>
+        </div>
+
+        {hasOverlap && (
+          <div style={{ background:"#fef2f2", color:"#dc2626", padding:"8px 10px", borderRadius:8, fontSize:13, marginBottom:12, fontFamily:"sans-serif" }}>
+            These dates overlap with an existing reservation. Please choose different dates.
+          </div>
+        )}
+
+        {stay && (
+          <div style={{ background:"#f0fdf4", borderRadius:8, padding:"10px 14px", marginBottom:16, fontFamily:"sans-serif", fontSize:14 }}>
+            {breakdownLines.map((line,i) => (
+              <div key={i} style={{ marginBottom:4, color:"#374151" }}>{line}</div>
             ))}
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={()=>setStep(1)} style={btnSecondary}>← Back</button>
-              <button onClick={()=>setStep(3)} disabled={!form.name||!form.email} style={btnPrimary}>Next →</button>
+            <div style={{ marginTop:8, paddingTop:8, borderTop:"1px solid #d1fae5", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontWeight:600 }}>Total</span>
+              <strong style={{ color:"#16a34a", fontSize:18 }}>${total.toLocaleString()}</strong>
             </div>
           </div>
         )}
 
-        {step === 3 && (
-          <div>
-            <div style={{ background:"#f9fafb", borderRadius:10, padding:16, marginBottom:20 }}>
-              {[["Lot",lot],["Arrival",form.arrival],["Departure",form.departure],["Nights",nights],["Stay Type",form.type],["Total","$"+total.toLocaleString()]].map(([k,v])=>(
-                <div key={k} style={{ display:"flex", justifyContent:"space-between", fontSize:14, fontFamily:"sans-serif", marginBottom:6 }}>
-                  <span style={{ color:"#6b7280" }}>{k}</span>
-                  <span style={{ fontWeight:600 }}>{v}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={()=>setStep(2)} style={btnSecondary}>← Back</button>
-              <button onClick={()=>onConfirm(lot, form)} style={{ ...btnPrimary, flex:1 }}>✓ Confirm Booking</button>
-            </div>
+        {error && (
+          <div style={{ background:"#fef2f2", color:"#dc2626", padding:"8px 10px", borderRadius:8, fontSize:13, marginBottom:12, fontFamily:"sans-serif" }}>
+            {error}
           </div>
+        )}
+
+        <div style={{ fontSize:11, color:"#9ca3af", marginBottom:12, fontFamily:"sans-serif", lineHeight:1.5 }}>
+          Check-in: {parkSettings?.checkin_time || "2:00 PM"} · Check-out: {parkSettings?.checkout_time || "11:00 AM"}
+          <br />
+          Free cancellation up to {parkSettings?.cancellation_days ?? 7} day(s) before arrival.
+        </div>
+
+        <button onClick={handlePayNow} disabled={loading || !hasValidDates || hasOverlap} style={{ display:"block", width:"100%", background:"linear-gradient(135deg,#14532d,#16a34a)", color:"#fff", textAlign:"center", padding:"12px 14px", borderRadius:8, fontWeight:700, fontSize:14, fontFamily:"sans-serif", border:"none", cursor: loading || !hasValidDates || hasOverlap ? "default" : "pointer", opacity: loading || !hasValidDates || hasOverlap ? 0.6 : 1, boxShadow:"0 4px 12px rgba(22,163,74,0.3)" }}>
+          {loading ? "Processing..." : "Pay Now"}
+        </button>
+      </div>
+    </div>
+  );
+}
+function MyReservationsModal({ parkSettings, onClose }) {
+  const [email, setEmail] = useState("");
+  const [bookings, setBookings] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [cancellingId, setCancellingId] = useState(null);
+
+  async function handleSearch() {
+    setError("");
+    if (!email) {
+      setError("Please enter your email");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/get-my-bookings?email=' + encodeURIComponent(email));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not fetch bookings');
+      setBookings(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function daysUntil(dateStr) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(dateStr + "T00:00:00");
+    return Math.round((target - today) / 86400000);
+  }
+
+  async function handleCancel(orderId) {
+    if (!window.confirm("Cancel this reservation and request a refund?")) return;
+    setCancellingId(orderId);
+    setError("");
+    try {
+      const res = await fetch('/api/cancel-lot-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not cancel booking');
+      setBookings(prev => prev.filter(b => b.id !== orderId));
+      alert("Booking cancelled and refunded.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCancellingId(null);
+    }
+  }
+
+  const cancellationDays = parkSettings?.cancellation_days ?? 7;
+
+  return (
+    <div style={overlay}>
+      <div style={{ ...modal, maxWidth:480 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+          <h2 style={mh2}>My Reservations</h2>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#888" }}>✕</button>
+        </div>
+
+        {bookings === null && (
+          <>
+            <label style={lbl}>Email used for booking</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@email.com" style={inp} />
+            {error && (
+              <div style={{ background:"#fef2f2", color:"#dc2626", padding:"8px 10px", borderRadius:8, fontSize:13, marginTop:10 }}>{error}</div>
+            )}
+            <button onClick={handleSearch} disabled={loading} style={{ ...btnPrimary, width:"100%", marginTop:14 }}>
+              {loading ? "Searching..." : "Find My Reservations"}
+            </button>
+          </>
+        )}
+
+        {bookings !== null && (
+          <>
+            {bookings.length === 0 ? (
+              <p style={{ fontFamily:"sans-serif", color:"#666" }}>No upcoming reservations found for this email.</p>
+            ) : (
+              bookings.map(b => {
+                const eligible = daysUntil(b.arrival_date) >= cancellationDays;
+                return (
+                  <div key={b.id} style={{ background:"#f9fafb", borderRadius:10, padding:14, marginBottom:10, fontFamily:"sans-serif" }}>
+                    <div style={{ fontWeight:700, fontSize:14, marginBottom:4 }}>Lot {b.lot_id}</div>
+                    <div style={{ fontSize:13, color:"#6b7280", marginBottom:4 }}>{b.arrival_date} → {b.departure_date}</div>
+                    <div style={{ fontSize:13, color:"#374151", marginBottom:8 }}>Total paid: ${b.amount_total.toLocaleString()}</div>
+                    {eligible ? (
+                      <button
+                        onClick={() => handleCancel(b.id)}
+                        disabled={cancellingId === b.id}
+                        style={{ background:"#dc2626", color:"#fff", border:"none", padding:"8px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600 }}>
+                        {cancellingId === b.id ? "Processing..." : "Cancel & Refund"}
+                      </button>
+                    ) : (
+                      <div style={{ fontSize:12, color:"#9ca3af" }}>
+                        Not eligible for refund (must cancel at least {cancellationDays} day(s) before arrival)
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+            {error && (
+              <div style={{ background:"#fef2f2", color:"#dc2626", padding:"8px 10px", borderRadius:8, fontSize:13, marginTop:10 }}>{error}</div>
+            )}
+            <button onClick={() => { setBookings(null); setEmail(""); }} style={{ ...btnSecondary, width:"100%", marginTop:10 }}>
+              Search a different email
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -316,6 +625,7 @@ export default function AlohaMap() {
   const [hover, setHover] = useState(null);
   const [selected, setSelected] = useState(null);
   const [selectedStorageLot, setSelectedStorageLot] = useState(null);
+  const [payLotSelected, setPayLotSelected] = useState(null);
   const [confirmed, setConfirmed] = useState(null);
   const containerRef = useRef(null);
   const [scale, setScale] = useState({ w: 900, h: 1130 });
@@ -329,11 +639,15 @@ export default function AlohaMap() {
   const [emojiRotations, setEmojiRotations] = useState({});
   const [textRotations, setTextRotations] = useState({});
   const [lotInfo, setLotInfo] = useState({});
+  const [parkSettings, setParkSettings] = useState({ cancellation_days: 7, checkin_time: "2:00 PM", checkout_time: "11:00 AM" });
+  const [showParkSettings, setShowParkSettings] = useState(false);
+  const [showMyReservations, setShowMyReservations] = useState(false);
   const [emojis, setEmojis] = useState([]);
   const [lotShapes, setLotShapes] = useState({});
   const [dragging, setDragging] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [editMode, setEditMode] = useState(true);
+  const isAdmin = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("edit") === "true";
+  const [editMode, setEditMode] = useState(false);
   const [activeEmoji, setActiveEmoji] = useState(null);
   const [propaneModalLotId, setPropaneModalLotId] = useState(null);
   const [storageModalOpen, setStorageModalOpen] = useState(false);
@@ -372,6 +686,8 @@ export default function AlohaMap() {
       if (textRotRows.length > 0) setTextRotations(textRotRows[0].data || {});
       const info = await loadLotInfo(PARK_ID);
       setLotInfo(info);
+      const settings = await loadParkSettings();
+      if (settings) setParkSettings(settings);
     }
     loadData();
   }, []);
@@ -722,15 +1038,61 @@ export default function AlohaMap() {
         <StorageCheckoutModal onClose={()=>setStorageModalOpen(false)} />
       )}
 
-      {/* Edit/Preview Toggle */}
-      <div style={{ maxWidth:900, margin:"0 auto 10px", display:"flex", justifyContent:"flex-end" }}>
-        <button
-          onClick={() => { setEditMode(m => !m); setActiveEmoji(null); }}
-          style={{ background: editMode ? "#f59e0b" : "#16a34a", color:"#fff", border:"none", padding:"8px 20px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:700, boxShadow:"0 2px 6px rgba(0,0,0,0.15)" }}
-        >
-          {editMode ? "👁 Switch to Preview Mode" : "✏️ Switch to Edit Mode"}
-        </button>
+            {/* Edit/Preview Toggle */}
+      <div style={{ maxWidth:900, margin:"0 auto 10px", display:"flex", justifyContent:"flex-end", gap:8 }}>
+        {isAdmin && editMode && (
+          <button
+            onClick={() => setShowParkSettings(true)}
+            style={{ background:"#374151", color:"#fff", border:"none", padding:"8px 20px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:700 }}
+          >
+            ⚙️ Park Settings
+          </button>
+        )}
+        {isAdmin && (
+          <button
+            onClick={() => { setEditMode(m => !m); setActiveEmoji(null); }}
+            style={{ background: editMode ? "#f59e0b" : "#16a34a", color:"#fff", border:"none", padding:"8px 20px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:700, boxShadow:"0 2px 6px rgba(0,0,0,0.15)" }}
+          >
+            {editMode ? "👁 Switch to Preview Mode" : "✏️ Switch to Edit Mode"}
+          </button>
+        )}
       </div>
+
+      {showParkSettings && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:2000 }}>
+          <div style={{ background:"#fff", borderRadius:12, padding:24, width:340, maxWidth:"90vw", fontFamily:"sans-serif" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+              <h3 style={{ margin:0, fontSize:16, fontWeight:700 }}>Park Settings</h3>
+              <button onClick={()=>setShowParkSettings(false)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#888" }}>✕</button>
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ fontSize:12, color:"#6b7280", display:"block", marginBottom:4 }}>Check-in Time</label>
+              <input type="text" value={parkSettings.checkin_time}
+                onChange={e=>setParkSettings(p=>({...p, checkin_time:e.target.value}))}
+                style={{ width:"100%", padding:"8px 10px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ fontSize:12, color:"#6b7280", display:"block", marginBottom:4 }}>Check-out Time</label>
+              <input type="text" value={parkSettings.checkout_time}
+                onChange={e=>setParkSettings(p=>({...p, checkout_time:e.target.value}))}
+                style={{ width:"100%", padding:"8px 10px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
+            </div>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:12, color:"#6b7280", display:"block", marginBottom:4 }}>Cancellation Window (days before arrival for full refund)</label>
+              <input type="number" value={parkSettings.cancellation_days}
+                onChange={e=>setParkSettings(p=>({...p, cancellation_days:parseInt(e.target.value,10) || 0}))}
+                style={{ width:"100%", padding:"8px 10px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
+            </div>
+            <button onClick={async ()=>{
+              await saveParkSettings(parkSettings);
+              alert("Park settings saved!");
+              setShowParkSettings(false);
+            }} style={{ width:"100%", background:"#16a34a", color:"#fff", border:"none", padding:"10px", borderRadius:8, cursor:"pointer", fontSize:14, fontWeight:700 }}>
+              Save Settings
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Edit Panel */}
       {editMode && (
@@ -965,6 +1327,20 @@ export default function AlohaMap() {
                           onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], price_monthly:parseFloat(e.target.value)}}))}
                           style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
                       </div>
+                      <div>
+                        <label style={{ fontSize:11, color:"#6b7280",display:"block", marginBottom:3 }}>Weekly Price ($)</label>
+                        <input type="number" defaultValue={lotInfo[activeEditLot]?.price_weekly || ""}
+                          onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], price_weekly:parseFloat(e.target.value)}}))}
+                          placeholder="optional"
+                          style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize:11, color:"#6b7280",display:"block", marginBottom:3 }}>Yearly Price ($)</label>
+                        <input type="number" defaultValue={lotInfo[activeEditLot]?.price_yearly || ""}
+                          onChange={e=>setLotInfo(prev=>({...prev,[activeEditLot]:{...prev[activeEditLot], price_yearly:parseFloat(e.target.value)}}))}
+                          placeholder="optional"
+                          style={{ width:"100%", padding:"6px 8px", border:"1px solid #d1d5db", borderRadius:6, fontSize:13, boxSizing:"border-box" }} />
+                      </div>
                     </div>
                     <div style={{ marginTop:8 }}>
                       <label style={{ fontSize:11, color:"#6b7280", display:"block", marginBottom:3 }}>Description</label>
@@ -980,6 +1356,8 @@ export default function AlohaMap() {
                         amperage: info.amperage || 50,
                         price_daily: info.price_daily || 45,
                         price_monthly: info.price_monthly || 650,
+                        price_weekly: info.price_weekly || null,
+                        price_yearly: info.price_yearly || null,
                         description: info.description || ""
                       });
                       alert("Lot info saved!");
@@ -1044,8 +1422,9 @@ export default function AlohaMap() {
         <BookingModal
           lot={selected.lot}
           status={selected.status}
+          lotInfo={lotInfo[selected.lot]}
+          parkSettings={parkSettings}
           onClose={() => setSelected(null)}
-          onConfirm={handleConfirm}
         />
       )}
 

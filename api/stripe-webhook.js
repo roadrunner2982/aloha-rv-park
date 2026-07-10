@@ -32,6 +32,30 @@ const PRODUCT_LABELS = {
   motorhome: 'Motor Home 40LB Tank',
 };
 
+async function updateLotStatus(lotId, newStatus) {
+  const { data: statusRow } = await supabase
+    .from('map_elements')
+    .select('data')
+    .eq('park_id', 'aloha')
+    .eq('element_type', 'statuses')
+    .eq('element_key', 'all')
+    .single();
+
+  const currentStatuses = statusRow?.data || {};
+  currentStatuses[lotId] = newStatus;
+
+  const { error: statusError } = await supabase
+    .from('map_elements')
+    .upsert(
+      { park_id: 'aloha', element_type: 'statuses', element_key: 'all', data: currentStatuses },
+      { onConflict: 'park_id,element_type,element_key' }
+    );
+
+  if (statusError) {
+    console.error('Error updating lot status:', statusError);
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -53,7 +77,45 @@ export default async function handler(req, res) {
     const session = event.data.object;
     const { service } = session.metadata || {};
 
-    if (service === 'rv_storage') {
+    if (service === 'rv_lot') {
+      const { lotId, arrivalDate, departureDate, months, weeks, extraDays, isYearly } = session.metadata || {};
+
+      try {
+        const { error } = await supabase.from('lot_orders').upsert(
+          {
+            lot_id: lotId,
+            customer_email: session.customer_details?.email || null,
+            customer_name: session.customer_details?.name || null,
+            billing_type: isYearly === 'true' ? 'yearly' : 'monthly_daily',
+            quantity: null,
+            months: parseInt(months, 10) || 0,
+            weeks: parseInt(weeks, 10) || 0,
+            extra_days: parseInt(extraDays, 10) || 0,
+            amount_total: (session.amount_total || 0) / 100,
+            is_subscription: false,
+            stripe_session_id: session.id,
+            stripe_payment_intent: session.payment_intent || null,
+            status: 'paid',
+            arrival_date: arrivalDate || null,
+            departure_date: departureDate || null,
+          },
+          { onConflict: 'stripe_session_id' }
+        );
+
+        if (error) {
+          console.error('Supabase lot order insert error:', error);
+        }
+
+        // Long-term stays (monthly/yearly) become residents (occupied/red).
+        // Short-term stays (weekly/daily only) are just reserved (orange).
+        const isLongTerm = isYearly === 'true' || parseInt(months, 10) > 0;
+        if (lotId) {
+          await updateLotStatus(lotId, isLongTerm ? 'occupied' : 'reserved');
+        }
+      } catch (err) {
+        console.error('Error saving lot order:', err);
+      }
+    } else if (service === 'rv_storage') {
       const { billingType, quantity, isSubscription, lotId } = session.metadata || {};
 
       try {
@@ -75,6 +137,10 @@ export default async function handler(req, res) {
 
         if (error) {
           console.error('Supabase storage order insert error:', error);
+        }
+
+        if (lotId) {
+          await updateLotStatus(lotId, 'reserved');
         }
       } catch (err) {
         console.error('Error saving storage order:', err);

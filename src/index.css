@@ -1,0 +1,13 @@
+.lot-date-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+  font-family: sans-serif;
+}
+
+.react-datepicker-wrapper {
+  width: 100%;
+}
