@@ -855,7 +855,7 @@ export default function AlohaMap() {
       {/* Header */}
       <div style={{ background:"linear-gradient(135deg,#14532d,#16a34a)", padding:"16px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div>
-          <div style={{ fontFamily:"Georgia,serif", fontWeight:900, fontSize:22, color:"#fff" }}>🏖️ Aloha RV Park</div>
+          <div style={{ fontFamily:"Georgia,serif", fontWeight:900, fontSize:22, color:"#fff" }}>🌺 Aloha RV Park</div>
           <div style={{ fontSize:12, color:"rgba(255,255,255,0.8)", letterSpacing:1 }}>INTERACTIVE LOT MAP · KISSIMMEE, FL</div>
         </div>
         <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
