@@ -11,6 +11,7 @@ const MAP_IMG = "/AlohaRvParkMap.png";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY;
 const PARK_ID = 'aloha';
+const COMPANY_ID = 'a20e3b7e-36e3-40af-983c-8136cd0ef0ed';
 
 async function saveToSupabase(type, key, data) {
   const res = await fetch(SUPABASE_URL + '/rest/v1/map_elements?on_conflict=park_id,element_type,element_key', {
@@ -21,7 +22,7 @@ async function saveToSupabase(type, key, data) {
       'Content-Type': 'application/json',
       'Prefer': 'resolution=merge-duplicates'
     },
-    body: JSON.stringify({ park_id: PARK_ID, element_type: type, element_key: key, data })
+    body: JSON.stringify({ park_id: PARK_ID, company_id: COMPANY_ID, element_type: type, element_key: key, data })
   });
   return res.ok;
 }
