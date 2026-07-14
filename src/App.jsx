@@ -280,6 +280,24 @@ function BookingModal({ lot, status, lotInfo, parkSettings, onClose }) {
   const [error, setError] = useState("");
   const [bookedRanges, setBookedRanges] = useState([]);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
+  const [allowLotBooking, setAllowLotBooking] = useState(true);
+  const [listing, setListing] = useState(null);
+
+  useEffect(() => {
+    fetch(SUPABASE_URL + '/rest/v1/real_estate_listings?park_id=eq.' + PARK_ID + '&lot_key=eq.' + encodeURIComponent(lot) + '&available=eq.true&select=*', {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+    })
+      .then(res => res.json())
+      .then(rows => {
+        if (Array.isArray(rows) && rows.length > 0) {
+          setListing(rows[0]);
+          if (rows[0].allow_lot_booking === false) {
+            setAllowLotBooking(false);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [lot]);
 
   useEffect(() => {
     fetch('/api/get-lot-availability?lotId=' + encodeURIComponent(lot))
@@ -371,11 +389,44 @@ function BookingModal({ lot, status, lotInfo, parkSettings, onClose }) {
           <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#888" }}>✕</button>
         </div>
 
-        {status !== "available" && (
+        {listing && (
+          <div style={{ border:"1.5px solid #ede9fe", borderRadius:10, overflow:"hidden", marginBottom:16, fontFamily:"sans-serif" }}>
+            {listing.image_url ? (
+              <img src={listing.image_url} alt={listing.title} style={{ width:"100%", height:220, objectFit:"cover", objectPosition:"center 25%", display:"block" }} />
+            ) : (
+              <div style={{ width:"100%", height:100, background:"#f5f3ff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:36 }}>🏠</div>
+            )}
+            <div style={{ padding:"10px 12px" }}>
+              <div style={{ fontSize:11, color:"#7c3aed", fontWeight:700, textTransform:"uppercase", letterSpacing:0.5, marginBottom:2 }}>
+                {listing.type === "sale" ? "For Sale" : listing.type === "rent" ? "For Rent" : "Rent-to-Own"} · {listing.category}
+              </div>
+              <div style={{ fontWeight:700, fontSize:15, color:"#1f2937", marginBottom:4 }}>{listing.title}</div>
+              <div style={{ fontWeight:700, fontSize:16, color:"#7c3aed", marginBottom:6 }}>{listing.price}</div>
+              <div style={{ display:"flex", gap:12, fontSize:12, color:"#6b7280", marginBottom: listing.description ? 8 : 0 }}>
+                {listing.beds != null && <span>🛏 {listing.beds} bed</span>}
+                {listing.baths != null && <span>🚿 {listing.baths} bath</span>}
+                {listing.sqft != null && <span>📐 {listing.sqft} sqft</span>}
+              </div>
+              {listing.description && (
+                <div style={{ fontSize:12, color:"#6b7280", lineHeight:1.5, marginBottom:8 }}>{listing.description}</div>
+              )}
+              <div style={{ display:"flex", gap:8 }}>
+                <a href={`mailto:info@aloharvparkfl.com?subject=Inquiry: ${listing.title}`} style={{ display:"inline-block", background:"#7c3aed", color:"#fff", padding:"7px 14px", borderRadius:6, fontSize:12, fontWeight:700, textDecoration:"none" }}>
+                  📩 Inquire Now
+                </a>
+                <a href="tel:6892520567" style={{ display:"inline-block", background:"#fff", color:"#7c3aed", border:"1.5px solid #7c3aed", padding:"7px 14px", borderRadius:6, fontSize:12, fontWeight:700, textDecoration:"none" }}>
+                  📞 Call Us
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {status !== "available" && allowLotBooking && (
           <div style={{ display:"flex", alignItems:"center", gap:8, background:"#fffbeb", border:"1px solid #fde68a", borderRadius:8, padding:"8px 12px", marginBottom:16, fontFamily:"sans-serif" }}>
             <div style={{ width:10, height:10, borderRadius:3, background: STATUS_SOLID[status] }} />
             <span style={{ fontSize:12, color:"#92400e" }}>
-              This lot is currently marked <strong style={{ textTransform:"capitalize" }}>{status}</strong>, but you can still book any open dates below.
+              This lot is currently marked <strong style={{ textTransform:"capitalize" }}>{status.replace(/_/g," ")}</strong>, but you can still book any open dates below.
             </span>
           </div>
         )}
@@ -403,6 +454,16 @@ function BookingModal({ lot, status, lotInfo, parkSettings, onClose }) {
           </div>
         )}
 
+        {!allowLotBooking && (
+          <div style={{ background:"#f5f3ff", border:"1px solid #ddd6fe", borderRadius:8, padding:"12px 16px", marginBottom:16, fontFamily:"sans-serif" }}>
+            <p style={{ fontSize:13, color:"#5b21b6", margin:0, lineHeight:1.5 }}>
+              This lot is not available through our standard booking system. See details above or contact us for more information.
+            </p>
+          </div>
+        )}
+
+        {allowLotBooking && (
+        <>
         <div style={{ marginBottom:16 }}>
           <label style={lbl}>Rates</label>
           {(() => {
@@ -526,6 +587,8 @@ function BookingModal({ lot, status, lotInfo, parkSettings, onClose }) {
         <button onClick={handlePayNow} disabled={loading || !hasValidDates || hasOverlap} style={{ display:"block", width:"100%", background:"linear-gradient(135deg,#14532d,#16a34a)", color:"#fff", textAlign:"center", padding:"12px 14px", borderRadius:8, fontWeight:700, fontSize:14, fontFamily:"sans-serif", border:"none", cursor: loading || !hasValidDates || hasOverlap ? "default" : "pointer", opacity: loading || !hasValidDates || hasOverlap ? 0.6 : 1, boxShadow:"0 4px 12px rgba(22,163,74,0.3)" }}>
           {loading ? "Processing..." : "Pay Now"}
         </button>
+        </>
+        )}
       </div>
     </div>
   );
@@ -649,6 +712,13 @@ function MyReservationsModal({ parkSettings, onClose }) {
 }
 
 // ═══ Main App ═══
+const emojiHoverStyle = `
+.map-emoji-hover:hover {
+  transform: scale(1.25);
+  filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.9));
+}
+`;
+
 export default function AlohaMap() {
   const [statuses, setStatuses] = useState(initStatuses);
   const [hover, setHover] = useState(null);
@@ -676,6 +746,7 @@ export default function AlohaMap() {
   const [dragging, setDragging] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const isAdmin = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("edit") === "true";
+  const isInfoOnly = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("edit") === "info";
   const [editMode, setEditMode] = useState(false);
   const [activeEmoji, setActiveEmoji] = useState(null);
   const [propaneModalLotId, setPropaneModalLotId] = useState(null);
@@ -779,6 +850,7 @@ export default function AlohaMap() {
 
   return (
     <div style={{ minHeight:"100vh", background:"#f0fdf4", fontFamily:"sans-serif" }}>
+      <style>{emojiHoverStyle}</style>
       {/* Header */}
       <div style={{ background:"linear-gradient(135deg,#14532d,#16a34a)", padding:"16px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div>
@@ -968,15 +1040,16 @@ export default function AlohaMap() {
                 setEmojis(prev => prev.map(em => em.id === item.id ? { ...em, x: nx, y: ny } : em));
               }}
               enableResizing={false}
-              disableDragging={!editMode}
-              style={{ fontSize: emojiSize, display:"flex", alignItems:"center", justifyContent:"center", cursor: editMode ? "move" : "pointer", zIndex:100 }}
+              disableDragging={!(editMode || isInfoOnly)}
+              style={{ fontSize: emojiSize, display:"flex", alignItems:"center", justifyContent:"center", cursor: (editMode || isInfoOnly) ? "move" : "pointer", zIndex:100 }}
             >
               <span
                 onClick={e => { e.stopPropagation(); setActiveEmoji(activeEmoji === item.id ? null : item.id); }}
-                style={{ lineHeight:1, userSelect:"none" }}
+                className="map-emoji-hover"
+                style={{ lineHeight:1, userSelect:"none", display:"inline-block", transition:"transform 0.15s, filter 0.15s" }}
               >{item.emoji}</span>
 
-              {editMode && activeEmoji === item.id && (
+              {(editMode || isInfoOnly) && activeEmoji === item.id && (
                 <div onClick={e => e.stopPropagation()} style={{ position:"absolute", bottom:"calc(100% + 8px)", left:"50%", transform:"translateX(-50%)", background:"#fff", border:"1.5px solid #d1d5db", borderRadius:10, padding:"10px 12px", minWidth:210, boxShadow:"0 4px 16px rgba(0,0,0,0.2)", zIndex:500, fontFamily:"sans-serif" }}>
                   <div style={{ fontSize:11, color:"#6b7280", marginBottom:3, fontWeight:600 }}>POPUP TITLE</div>
                   <input
@@ -1006,7 +1079,7 @@ export default function AlohaMap() {
                 </div>
               )}
 
-              {!editMode && activeEmoji === item.id && (item.label || item.info) && (
+              {!editMode && !isInfoOnly && activeEmoji === item.id && (item.label || item.info) && (
                 <div onClick={()=>setActiveEmoji(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:1999, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
                   <div onClick={e=>e.stopPropagation()} style={{ background:"#fff", borderRadius:20, padding:"24px 28px", minWidth:280, maxWidth:360, width:"100%", boxShadow:"0 24px 64px rgba(0,0,0,0.4)", fontFamily:"sans-serif", position:"relative" }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
@@ -1120,6 +1193,41 @@ export default function AlohaMap() {
               Save Settings
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Info-Only Panel (admin.aloha restricted mode) */}
+      {isInfoOnly && !editMode && (
+        <div style={{ maxWidth:900, margin:"0 auto 20px", background:"#fff", border:"2px solid #8b5cf6", borderRadius:14, padding:16, fontFamily:"sans-serif" }}>
+          <div style={{ marginBottom:10, fontSize:12, color:"#6b7280" }}>
+            Click any icon on the map to edit its title/info. Use the buttons below to add a new icon.
+          </div>
+          <div style={{ marginBottom:14, padding:12, background:"#fef9c3", borderRadius:10 }}>
+            <strong style={{ fontSize:13, color:"#854d0e" }}>Add Emoji/Sticker</strong>
+            <div style={{ fontSize:11, color:"#92400e", marginBottom:6, marginTop:2 }}>Click to place at center, then click it to add a title/info</div>
+            <div style={{ marginBottom:4, fontSize:11, color:"#6b7280", fontWeight:600 }}>AMENITIES</div>
+            <div style={{ display:"flex", gap:6, marginBottom:8, flexWrap:"wrap" }}>
+              {["🏢","🏊","🎯","⛽","🗑️","🔥","🧺","🚹","🚺","🅿️","🏛️","⛹🏽","🚑","🚐","♻️","🚻"].map(emoji=>(
+                <button key={emoji} onClick={()=>{
+                  setEmojis(prev=>[...prev, { id: Date.now(), emoji, x:50, y:50, label:"" }]);
+                }} style={{ fontSize:16, background:"#fffbeb", border:"1px solid #fcd34d", borderRadius:8, padding:"4px 8px", cursor:"pointer" }}>{emoji}</button>
+              ))}
+            </div>
+            <div style={{ marginBottom:4, fontSize:11, color:"#6b7280", fontWeight:600 }}>NATURE & DECOR</div>
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+              {["⭐","🌴","🌳","🎄","🎃","👻","☃️","❄️","🌺","🐄","🦌","🔥"].map(emoji=>(
+                <button key={emoji} onClick={()=>{
+                  setEmojis(prev=>[...prev, { id: Date.now(), emoji, x:50, y:50, label:"" }]);
+                }} style={{ fontSize:16, background:"none", border:"1px solid #d1d5db", borderRadius:8, padding:"4px 8px", cursor:"pointer" }}>{emoji}</button>
+              ))}
+            </div>
+          </div>
+          <button onClick={async ()=>{
+            await saveToSupabase('emojis', 'all', emojis);
+            alert("Saved!");
+          }} style={{ width:"100%", background:"#8b5cf6", color:"#fff", border:"none", padding:"10px", borderRadius:8, cursor:"pointer", fontSize:14, fontWeight:700 }}>
+            💾 Save Changes
+          </button>
         </div>
       )}
 
