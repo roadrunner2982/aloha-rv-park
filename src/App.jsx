@@ -10,10 +10,20 @@ const MAP_IMG = "/AlohaRvParkMap.png";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY;
-const PARK_ID = 'aloha';
-const COMPANY_ID = 'a20e3b7e-36e3-40af-983c-8136cd0ef0ed';
+const PARK_ID = (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("park_id")) || 'aloha';
+let cachedCompanyId = null;
+async function getCompanyId() {
+  if (cachedCompanyId) return cachedCompanyId;
+  const res = await fetch(SUPABASE_URL + '/rest/v1/companies?park_id=eq.' + PARK_ID + '&select=id', {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+  });
+  const rows = await res.json();
+  cachedCompanyId = rows[0]?.id || null;
+  return cachedCompanyId;
+}
 
 async function saveToSupabase(type, key, data) {
+  const companyId = await getCompanyId();
   const res = await fetch(SUPABASE_URL + '/rest/v1/map_elements?on_conflict=park_id,element_type,element_key', {
     method: 'POST',
     headers: {
@@ -22,7 +32,7 @@ async function saveToSupabase(type, key, data) {
       'Content-Type': 'application/json',
       'Prefer': 'resolution=merge-duplicates'
     },
-    body: JSON.stringify({ park_id: PARK_ID, company_id: COMPANY_ID, element_type: type, element_key: key, data })
+    body: JSON.stringify({ park_id: PARK_ID, company_id: companyId, element_type: type, element_key: key, data })
   });
   return res.ok;
 }
