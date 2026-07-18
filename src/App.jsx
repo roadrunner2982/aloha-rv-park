@@ -10,6 +10,9 @@ const MAP_IMG = "/AlohaRvParkMap.png";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY;
+console.log("DEBUG SUPABASE_URL:", SUPABASE_URL);
+console.log("DEBUG SUPABASE_KEY length:", SUPABASE_KEY ? SUPABASE_KEY.length : "undefined/null");
+console.log("DEBUG all env:", import.meta.env);
 const PARK_ID = (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("park_id")) || 'aloha';
 let cachedCompanyId = null;
 async function getCompanyId() {
