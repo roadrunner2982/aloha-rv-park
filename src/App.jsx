@@ -483,7 +483,9 @@ function BookingModal({ lot, status, lotInfo, parkSettings, onClose }) {
         {!(allowLotBooking && canBookStatus) && (
           <div style={{ background:"#f5f3ff", border:"1px solid #ddd6fe", borderRadius:8, padding:"12px 16px", marginBottom:16, fontFamily:"sans-serif" }}>
             <p style={{ fontSize:13, color:"#5b21b6", margin:0, lineHeight:1.5 }}>
-              This lot is not available through our standard booking system. See details above or contact us for more information.
+              {status === "occupied"
+                ? "This lot is currently under a month-to-month lease and is not available for rent at this time. Please check back later, or take a look at our other available (green) or soon-to-be-available (orange) lots on the map."
+                : "This lot is not available through our standard booking system. See details above or contact us for more information."}
             </p>
           </div>
         )}
@@ -550,6 +552,44 @@ function BookingModal({ lot, status, lotInfo, parkSettings, onClose }) {
             );
           })()}
         </div>
+
+        {(() => {
+          // For 'reserved' lots, surface the nearest actually-open date up
+          // front so the guest isn't left guessing among all the grayed-out
+          // days — walks past any back-to-back/overlapping blocked ranges
+          // starting today.
+          if (status !== "reserved" || loadingAvailability) return null;
+          let candidate = new Date();
+          candidate.setHours(0, 0, 0, 0);
+          let changed = true;
+          while (changed) {
+            changed = false;
+            for (const r of bookedRanges) {
+              const start = new Date(r.arrival_date + "T00:00:00");
+              const end = new Date(r.departure_date + "T00:00:00");
+              if (candidate >= start && candidate < end) {
+                candidate = new Date(end);
+                changed = true;
+              }
+            }
+          }
+          const label = candidate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+          const isoDate = candidate.toISOString().split("T")[0];
+          return (
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:8, padding:"10px 12px", marginBottom:12, fontFamily:"sans-serif" }}>
+              <span style={{ fontSize:12.5, color:"#166534" }}>
+                Next available date: <strong>{label}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setForm(prev => ({ ...prev, arrival: isoDate }))}
+                style={{ fontSize:11.5, fontWeight:700, color:"#166534", background:"#dcfce7", border:"1px solid #86efac", borderRadius:6, padding:"5px 10px", cursor:"pointer", whiteSpace:"nowrap" }}
+              >
+                Use this date
+              </button>
+            </div>
+          );
+        })()}
 
         <div style={row2}>
           <div>
